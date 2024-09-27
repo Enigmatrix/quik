@@ -20,30 +20,24 @@ pub struct InitialPacket<'a> {
     pub token: &'a [u8],
     // variable length
     pub packet_number: u32,
-    // TODO this needs to be parsed again
-    pub payload: &'a [u8],
 }
 
-pub struct ZeroRTTPacket<'a> {
+pub struct ZeroRTTPacket {
     pub src_conn_id: ConnectionId,
     pub dest_conn_id: ConnectionId,
     pub version: u32,
 
     // variable length
     pub packet_number: u32,
-    // TODO this needs to be parsed again
-    pub payload: &'a [u8],
 }
 
-pub struct HandshakePacket<'a> {
+pub struct HandshakePacket {
     pub src_conn_id: ConnectionId,
     pub dest_conn_id: ConnectionId,
     pub version: u32,
 
     // variable length
     pub packet_number: u32,
-    // TODO this needs to be parsed again
-    pub payload: &'a [u8],
 }
 
 pub struct RetryPacket<'a> {
@@ -56,12 +50,11 @@ pub struct RetryPacket<'a> {
 }
 
 // This one actually uses the short header
-pub struct OneRttPacket<'a> {
+pub struct OneRttPacket {
     pub dest_conn_id: ConnectionId,
     pub spin: u8,
     pub key_phase: u8,
 
     // variable length
     pub packet_number: u32,
-    pub payload: &'a [u8],
 }
