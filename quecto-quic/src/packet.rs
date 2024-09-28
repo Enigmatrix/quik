@@ -1,9 +1,23 @@
 // Packets handled by the middle layer
 
+use std::error::Error;
+pub use byteorder::ReadBytesExt as Buffer;
+
+pub type Result<T> = std::result::Result<T, Box<dyn Error>>;
+
 // 160 bits max, variable length
 pub struct ConnectionId {
-    pub length: u8,
+    pub length: usize,
     pub buf: [u8; 20],
+}
+
+impl ConnectionId {
+    pub fn parse(mut src: impl Buffer) -> Result<Self> {
+        let length = src.read_u8()? as usize;
+        let mut buf = [0; 20];
+        src.read_exact(&mut buf[..length])?;
+        Ok(Self { length, buf })
+    }
 }
 
 pub struct VersionNegotiationPacket<'a> {

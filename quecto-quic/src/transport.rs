@@ -1,3 +1,8 @@
+use byteorder::NetworkEndian;
+use crate::packet::Buffer;
+
+use crate::packet::{ConnectionId, Result};
+
 pub struct Connection;
 
 impl Connection {
@@ -5,16 +10,22 @@ impl Connection {
         // Send data
     }
 
-    pub fn recv(&self, data: &[u8]) {
-        let first_byte = data[0];
+    pub fn recv(&self, mut data: &[u8]) -> Result<()> {
+        let first_byte = data.read_u8()?;
         if first_byte & 0b1 == 1 {
-            // This is a long header
+            // Long Header
+            let version = (&data[1..]).read_u32::<NetworkEndian>()?;
+            let dest_conn_id = ConnectionId::parse(&data[5..])?;
+            let src_conn_id = ConnectionId::parse(&data[6 + dest_conn_id.length..])?;
             if (first_byte >> 1) & 0b1 == 0 {
-                // TODO this *must* be a VersionNegotiationPacket
-                // check or else return an error
+                if version == 0 {
+                    // VersionNegotiation packet
+                } else {
+                    // throw error, this is invalid
+                }
             }
             let packet_type = (first_byte >> 2) & 0b11;
-            let version = u32::from_be_bytes(data[1..5]);
+            let data = &data[6 + dest_conn_id.length + src_conn_id.length..];
             match packet_type {
                 0b00 => {
                     // Initial packet
@@ -31,8 +42,9 @@ impl Connection {
                 _ => unreachable!()
             }
         } else {
-            // This is a short header
+            // Short Header
         }
+        Ok(())
     }
     
     pub fn close(self) {
