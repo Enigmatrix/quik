@@ -2,12 +2,28 @@ use byteorder::{ByteOrder, NetworkEndian};
 
 use crate::packet::{Buffer, ConnectionId, Result};
 
+pub struct PacketNumber;
+
+impl PacketNumber {
+    pub fn parse(src: &mut impl Buffer, len: usize) -> Result<u32> {
+        let mut buf = [0u8; 4];
+        src.read_exact(&mut buf[..len])?;
+        Ok(NetworkEndian::read_u32(&buf))
+    }
+}
+
 pub struct VarInt {
     inner: u64,
 }
 
+impl From<VarInt> for usize {
+    fn from(val: VarInt) -> Self {
+        val.inner as usize
+    }
+}
+
 impl VarInt {
-    pub fn parse(mut src: impl Buffer) -> Result<Self> {
+    pub fn parse(src: &mut impl Buffer) -> Result<Self> {
         let mut buf = [0u8; 8];
         src.read_exact(&mut buf[..1])?;
         let typ = buf[0] >> 6;

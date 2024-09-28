@@ -12,7 +12,7 @@ pub struct ConnectionId {
 }
 
 impl ConnectionId {
-    pub fn parse(mut src: impl Buffer) -> Result<Self> {
+    pub fn parse(src: &mut impl Buffer) -> Result<Self> {
         let length = src.read_u8()? as usize;
         let mut buf = [0; 20];
         src.read_exact(&mut buf[..length])?;
