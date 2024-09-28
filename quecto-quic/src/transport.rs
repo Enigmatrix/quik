@@ -1,5 +1,5 @@
-use byteorder::NetworkEndian;
 use crate::packet::Buffer;
+use byteorder::NetworkEndian;
 
 use crate::packet::{ConnectionId, Result};
 
@@ -14,9 +14,9 @@ impl Connection {
         let first_byte = data.read_u8()?;
         if first_byte & 0b1 == 1 {
             // Long Header
-            let version = (&data[1..]).read_u32::<NetworkEndian>()?;
-            let dest_conn_id = ConnectionId::parse(&data[5..])?;
-            let src_conn_id = ConnectionId::parse(&data[6 + dest_conn_id.length..])?;
+            let version = data.read_u32::<NetworkEndian>()?;
+            let dest_conn_id = ConnectionId::parse(data)?;
+            let src_conn_id = ConnectionId::parse(data)?;
             if (first_byte >> 1) & 0b1 == 0 {
                 if version == 0 {
                     // VersionNegotiation packet
@@ -25,7 +25,6 @@ impl Connection {
                 }
             }
             let packet_type = (first_byte >> 2) & 0b11;
-            let data = &data[6 + dest_conn_id.length + src_conn_id.length..];
             match packet_type {
                 0b00 => {
                     // Initial packet
@@ -39,14 +38,14 @@ impl Connection {
                 0b11 => {
                     // Retry packet
                 }
-                _ => unreachable!()
+                _ => unreachable!(),
             }
         } else {
             // Short Header
         }
         Ok(())
     }
-    
+
     pub fn close(self) {
         // Close connection
     }

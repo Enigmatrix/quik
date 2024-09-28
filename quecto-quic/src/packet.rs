@@ -1,7 +1,7 @@
 // Packets handled by the middle layer
 
-use std::error::Error;
 pub use byteorder::ReadBytesExt as Buffer;
+use std::error::Error;
 
 pub type Result<T> = std::result::Result<T, Box<dyn Error>>;
 

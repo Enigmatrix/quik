@@ -1,6 +1,39 @@
-use crate::packet::ConnectionId;
+use byteorder::{ByteOrder, NetworkEndian};
 
-pub type VarInt = u64;
+use crate::packet::{Buffer, ConnectionId, Result};
+
+pub struct VarInt {
+    inner: u64,
+}
+
+impl VarInt {
+    pub fn parse(mut src: impl Buffer) -> Result<Self> {
+        let mut buf = [0u8; 8];
+        src.read_exact(&mut buf[..1])?;
+        let typ = buf[0] >> 6;
+        buf[0] &= 0b0011_1111;
+
+        Ok(Self {
+            inner: match typ {
+                0b00 => buf[0] as u64,
+                0b01 => {
+                    src.read_exact(&mut buf[1..2])?;
+                    NetworkEndian::read_u16(&buf) as u64
+                }
+                0b10 => {
+                    src.read_exact(&mut buf[1..4])?;
+                    NetworkEndian::read_u32(&buf) as u64
+                }
+                0b11 => {
+                    src.read_exact(&mut buf[1..8])?;
+                    NetworkEndian::read_u64(&buf) as u64
+                }
+                _ => unreachable!(),
+            },
+        })
+    }
+}
+
 pub type StreamId = VarInt;
 
 pub struct Padding;
@@ -88,18 +121,18 @@ pub struct RetireConnectionId {
 }
 
 pub struct PathChallenge {
-    pub data: u64
+    pub data: u64,
 }
 
 pub struct PathResponse {
-    pub data: u64
+    pub data: u64,
 }
 
 pub struct ConnectionClose<'a> {
     pub err_code: VarInt,
     // Some when it's a QUIC err rather than a application error
     pub frame_type: Option<VarInt>,
-    pub reason_phrase: &'a [u8]
+    pub reason_phrase: &'a [u8],
 }
 
 pub struct HandshakeDone;
