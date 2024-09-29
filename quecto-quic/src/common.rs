@@ -1,3 +1,5 @@
+use std::io;
+
 use crate::util::*;
 
 pub struct PacketNumber;
@@ -10,6 +12,7 @@ impl PacketNumber {
     }
 }
 
+#[derive(Debug, Clone, Hash, PartialEq, Eq)]
 pub struct VarInt {
     inner: u64,
 }
@@ -51,6 +54,7 @@ impl VarInt {
 pub type StreamId = VarInt;
 
 // 160 bits max, variable length
+#[derive(Debug, Clone, Hash, PartialEq, Eq)]
 pub struct ConnectionId {
     pub length: usize,
     pub buf: [u8; 20],
@@ -60,7 +64,125 @@ impl ConnectionId {
     pub fn parse(src: &mut impl Buffer) -> Result<Self> {
         let length = src.read_u8()? as usize;
         let mut buf = [0; 20];
-        src.read_exact(&mut buf[..length])?;
+        let (bufref, _) = buf.split_at_mut_checked(length).ok_or_else(|| {
+            io::Error::new(io::ErrorKind::UnexpectedEof, "length longer than 160 bits")
+        })?;
+        src.read_exact(bufref)?;
         Ok(Self { length, buf })
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use std::io;
+
+    use super::*;
+
+    #[test]
+    fn connid_parse_no_bytes_fails() {
+        let buf = Vec::<u8>::new();
+        let mut bufref = &buf[..];
+        let res = ConnectionId::parse(&mut bufref);
+        let kind = res
+            .err()
+            .as_ref()
+            .and_then(|e| e.downcast_ref::<io::Error>())
+            .map(|e| e.kind());
+        assert_eq!(kind, Some(io::ErrorKind::UnexpectedEof));
+    }
+
+    #[test]
+    fn connid_parse_size_only_fails() {
+        let buf = vec![19u8];
+        let mut bufref = &buf[..];
+        let res = ConnectionId::parse(&mut bufref);
+        let kind = res
+            .err()
+            .as_ref()
+            .and_then(|e| e.downcast_ref::<io::Error>())
+            .map(|e| e.kind());
+        assert_eq!(kind, Some(io::ErrorKind::UnexpectedEof));
+    }
+
+    #[test]
+    fn connid_parse_size_big_fails() {
+        let buf = vec![20u8];
+        let mut bufref = &buf[..];
+        let res = ConnectionId::parse(&mut bufref);
+        let kind = res
+            .err()
+            .as_ref()
+            .and_then(|e| e.downcast_ref::<io::Error>())
+            .map(|e| e.kind());
+        assert_eq!(kind, Some(io::ErrorKind::UnexpectedEof));
+    }
+
+    #[test]
+    fn connid_parse_size_very_big_fails() {
+        let buf = vec![0xffu8];
+        let mut bufref = &buf[..];
+        let res = ConnectionId::parse(&mut bufref);
+        let kind = res
+            .err()
+            .as_ref()
+            .and_then(|e| e.downcast_ref::<io::Error>())
+            .map(|e| e.kind());
+        assert_eq!(kind, Some(io::ErrorKind::UnexpectedEof));
+    }
+
+    #[test]
+    fn connid_parse_one_byte_passes() {
+        let buf = vec![1u8, 0x12, 0x34];
+        let mut bufref = &buf[..];
+        let res = ConnectionId::parse(&mut bufref);
+        assert_eq!(
+            res.ok(),
+            Some(ConnectionId {
+                length: 1 as usize,
+                buf: [0x12, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+            })
+        );
+        assert_eq!(bufref, &[0x34])
+    }
+
+    #[test]
+    fn connid_parse_10_bytes_passes() {
+        let buf = vec![
+            10u8, 0x11, 0x22, 0x33, 0x44, 0x55, 0x66, 0x77, 0x88, 0x99, 0x00, 0x12, 0x34,
+        ];
+        let mut bufref = &buf[..];
+        let res = ConnectionId::parse(&mut bufref);
+        assert_eq!(
+            res.ok(),
+            Some(ConnectionId {
+                length: 10 as usize,
+                buf: [
+                    0x11, 0x22, 0x33, 0x44, 0x55, 0x66, 0x77, 0x88, 0x99, 0x00, 0, 0, 0, 0, 0, 0,
+                    0, 0, 0, 0
+                ]
+            })
+        );
+        assert_eq!(bufref, &[0x12, 0x34])
+    }
+
+    #[test]
+    fn connid_parse_max_byte_passes() {
+        let buf = vec![
+            20u8, 0x11, 0x22, 0x33, 0x44, 0x55, 0x66, 0x77, 0x88, 0x99, 0x00, 0x22, 0x11, 0x33,
+            0x55, 0x44, 0x77, 0x66, 0x99, 0x11, 0x20, 0x12, 0x34,
+        ];
+        let mut bufref = &buf[..];
+        let res = ConnectionId::parse(&mut bufref);
+        assert_eq!(
+            res.ok(),
+            Some(ConnectionId {
+                length: 20 as usize,
+                buf: [
+                    0x11, 0x22, 0x33, 0x44, 0x55, 0x66, 0x77, 0x88, 0x99, 0x00, 0x22, 0x11, 0x33,
+                    0x55, 0x44, 0x77, 0x66, 0x99, 0x11, 0x20
+                ]
+            })
+        );
+        assert_eq!(bufref, &[0x12, 0x34])
     }
 }
