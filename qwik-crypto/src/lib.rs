@@ -1,6 +1,6 @@
-use quecto_quic::common::ConnectionId;
-use quecto_quic::crypto::Crypto;
-use quecto_util::*;
+use qwik_core::common::ConnectionId;
+use qwik_core::crypto::Crypto;
+use qwik_util::*;
 
 pub struct DefaultCrypto;
 

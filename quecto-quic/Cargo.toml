@@ -1,7 +1,0 @@
-[package]
-name = "quecto-quic"
-version = "0.1.0"
-edition = "2021"
-
-[dependencies]
-quecto-util = { path = "../quecto-util" }

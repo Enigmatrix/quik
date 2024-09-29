@@ -1,0 +1,10 @@
+[package]
+name = "qwik-crypto"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+qwik-util = { path = "../qwik-util" }
+qwik-core = { path = "../qwik-core" }
+hkdf = "0.12.4"
+ring = "0.17.8"
