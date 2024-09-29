@@ -93,7 +93,7 @@ mod tests {
     }
 
     #[test]
-    fn connid_parse_one_byte_succeeds() {
+    fn varint_parse_one_byte_succeeds() {
         let buf = vec![0b0011_0101, 0x34];
         let mut bufref = &buf[..];
         let res = VarInt::parse(&mut bufref);
@@ -105,7 +105,7 @@ mod tests {
     }
 
     #[test]
-    fn connid_parse_two_byte_succeeds() {
+    fn varint_parse_two_byte_succeeds() {
         let buf = vec![0b0110_0101, 0x34, 0x12];
         let mut bufref = &buf[..];
         let res = VarInt::parse(&mut bufref);
@@ -117,7 +117,7 @@ mod tests {
     }
 
     #[test]
-    fn connid_parse_four_byte_succeeds() {
+    fn varint_parse_four_byte_succeeds() {
         let buf = vec![0b1010_0101, 0x12, 0x34, 0x56, 0x78];
         let mut bufref = &buf[..];
         let res = VarInt::parse(&mut bufref);
@@ -129,7 +129,7 @@ mod tests {
     }
 
     #[test]
-    fn connid_parse_eight_byte_succeeds() {
+    fn varint_parse_eight_byte_succeeds() {
         let buf = vec![0b1110_0101, 0x12, 0x34, 0x56, 0x78, 0x90, 0x11, 0x22, 0xaa];
         let mut bufref = &buf[..];
         let res = VarInt::parse(&mut bufref);
@@ -141,7 +141,7 @@ mod tests {
     }
 
     #[test]
-    fn connid_parse_one_byte_size_fails() {
+    fn varint_parse_one_byte_size_fails() {
         let buf = vec![0b0100_0000];
         let mut bufref = &buf[..];
         let res = VarInt::parse(&mut bufref);
@@ -174,7 +174,7 @@ mod tests {
     }
 
     #[test]
-    fn connid_parse_two_byte_fails() {
+    fn varint_parse_two_byte_fails() {
         let buf = vec![0b0110_0101];
         let mut bufref = &buf[..];
         let res = VarInt::parse(&mut bufref);
@@ -187,7 +187,7 @@ mod tests {
     }
 
     #[test]
-    fn connid_parse_four_byte_fails() {
+    fn varint_parse_four_byte_fails() {
         let buf = vec![0b1010_0101, 0x12, 0x34];
         let mut bufref = &buf[..];
         let res = VarInt::parse(&mut bufref);
@@ -200,7 +200,7 @@ mod tests {
     }
 
     #[test]
-    fn connid_parse_eight_byte_fails() {
+    fn varint_parse_eight_byte_fails() {
         let buf = vec![0b1110_0101, 0x12, 0x34, 0x56, 0x78, 0x90, 0x11];
         let mut bufref = &buf[..];
         let res = VarInt::parse(&mut bufref);
