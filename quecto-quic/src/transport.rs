@@ -1,12 +1,6 @@
-use std::io::Read;
-
-use crate::{
-    frame::{PacketNumber, VarInt},
-    packet::{Buffer, InitialPacket},
-};
-use byteorder::NetworkEndian;
-
-use crate::packet::{ConnectionId, Result};
+use crate::common::{ConnectionId, PacketNumber, VarInt};
+use crate::packet::InitialPacket;
+use crate::util::*;
 
 pub struct Connection;
 
@@ -33,7 +27,7 @@ impl Connection {
 
             if version == 0 {
                 // VersionNegotiation packet
-                return Ok(())
+                return Ok(());
             }
             match packet_type {
                 0b00 => {

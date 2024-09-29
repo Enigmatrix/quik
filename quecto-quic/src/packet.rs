@@ -1,24 +1,6 @@
+use crate::common::ConnectionId;
+use crate::util::*;
 // Packets handled by the middle layer
-
-pub use byteorder::ReadBytesExt as Buffer;
-use std::error::Error;
-
-pub type Result<T> = std::result::Result<T, Box<dyn Error>>;
-
-// 160 bits max, variable length
-pub struct ConnectionId {
-    pub length: usize,
-    pub buf: [u8; 20],
-}
-
-impl ConnectionId {
-    pub fn parse(src: &mut impl Buffer) -> Result<Self> {
-        let length = src.read_u8()? as usize;
-        let mut buf = [0; 20];
-        src.read_exact(&mut buf[..length])?;
-        Ok(Self { length, buf })
-    }
-}
 
 pub struct VersionNegotiationPacket<'a> {
     pub src_conn_id: ConnectionId,
