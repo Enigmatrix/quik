@@ -1,5 +1,5 @@
 use crate::common::ConnectionId;
-use crate::util::*;
+use quecto_util::*;
 // Packets handled by the middle layer
 
 pub struct VersionNegotiationPacket<'a> {

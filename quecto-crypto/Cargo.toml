@@ -1,7 +1,10 @@
 [package]
-name = "quecto-quic"
+name = "quecto-crypto"
 version = "0.1.0"
 edition = "2021"
 
 [dependencies]
 quecto-util = { path = "../quecto-util" }
+quecto-quic = { path = "../quecto-quic" }
+hkdf = "0.12.4"
+ring = "0.17.8"

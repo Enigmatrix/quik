@@ -1,6 +1,6 @@
 use crate::common::{ConnectionId, PacketNumber, VarInt};
 use crate::packet::InitialPacket;
-use crate::util::*;
+use quecto_util::*;
 
 pub struct Connection;
 

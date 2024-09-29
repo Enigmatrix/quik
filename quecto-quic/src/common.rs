@@ -1,6 +1,5 @@
 use std::io;
-
-use crate::util::*;
+use quecto_util::*;
 
 pub struct PacketNumber;
 
