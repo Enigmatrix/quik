@@ -5,6 +5,7 @@ use crate::util::*;
 pub struct PacketNumber;
 
 impl PacketNumber {
+    // Assumes length has correct bounds, or panics
     pub fn parse(src: &mut impl Buffer, len: usize) -> Result<u32> {
         let mut buf = [0u8; 4];
         src.read_exact(&mut buf[..len])?;
