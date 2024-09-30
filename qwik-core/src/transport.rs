@@ -49,8 +49,7 @@ impl<S: Server> Connection<S> {
                         token,
                         packet_number,
                     })?;
-                    let mut data =
-                        S::Crypto::decrypt_initial_data(dst_cid, version, false, data)?;
+                    let mut data = S::Crypto::decrypt_initial_data(dst_cid, version, false, data)?;
                     // TODO there are multiple frames...
                     self.handle_raw_frame(&mut data)?;
                 }
