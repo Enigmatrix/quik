@@ -1,6 +1,6 @@
 [package]
 name = "quik"
-version = "0.0.1"
+version = "0.0.5"
 edition = "2021"
 license = "MIT"
 repository = "https://github.com/Enigmatrix/quik"
@@ -9,5 +9,5 @@ The `quik` QUIC library
 """
 
 [dependencies]
-quik-core = { path = "../quik-core", version = "0.0.1" }
-quik-crypto = { path = "../quik-crypto", version = "0.0.1" }
+quik-core = { path = "../quik-core", version = "0.0.5" }
+quik-crypto = { path = "../quik-crypto", version = "0.0.5" }
