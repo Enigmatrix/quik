@@ -26,8 +26,8 @@ impl<S: Server> Connection<S> {
             let packet_number_length = first_byte & 0b11;
 
             let version = data.read_u32::<NetworkEndian>()?;
-            let dest_conn_id = ConnectionId::parse(&mut data)?;
-            let src_conn_id = ConnectionId::parse(&mut data)?;
+            let dst_cid = ConnectionId::parse(&mut data)?;
+            let src_cid = ConnectionId::parse(&mut data)?;
 
             if version == 0 {
                 // VersionNegotiation packet
@@ -43,14 +43,14 @@ impl<S: Server> Connection<S> {
                     let packet_number =
                         PacketNumber::parse(&mut data, 1 + packet_number_length as usize)?;
                     self.handle_initial_packet(InitialPacket {
-                        src_conn_id,
-                        dest_conn_id: dest_conn_id.clone(),
+                        src_cid,
+                        dst_cid: dst_cid.clone(),
                         version,
                         token,
                         packet_number,
                     })?;
                     let mut data =
-                        S::Crypto::decrypt_initial_data(dest_conn_id, version, false, data)?;
+                        S::Crypto::decrypt_initial_data(dst_cid, version, false, data)?;
                     // TODO there are multiple frames...
                     self.handle_raw_frame(&mut data)?;
                 }

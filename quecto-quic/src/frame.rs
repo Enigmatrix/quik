@@ -76,7 +76,7 @@ pub struct StreamsBlocked {
 pub struct NewConnectionId {
     pub seq_num: VarInt,
     pub retire_prior_to: VarInt,
-    pub connection_id: ConnectionId,
+    pub cid: ConnectionId,
     pub stateless_reset_token: u128,
 }
 
