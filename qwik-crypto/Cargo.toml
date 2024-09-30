@@ -2,6 +2,11 @@
 name = "qwik-crypto"
 version = "0.0.2"
 edition = "2021"
+license = "MIT"
+repository = "https://github.com/Enigmatrix/qwik"
+description = """
+Default crypto primitives for the `qwik` QUIC library
+"""
 
 [dependencies]
 qwik-util = { path = "../qwik-util" }
