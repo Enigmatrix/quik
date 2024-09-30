@@ -6,6 +6,6 @@ pub trait Crypto {
         cid: ConnectionId,
         version: u32,
         is_server: bool,
-        data: &[u8],
+        data: &mut impl Buffer,
     ) -> Result<impl Buffer>;
 }

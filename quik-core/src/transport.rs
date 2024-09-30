@@ -1,3 +1,4 @@
+use std::io::Read;
 use std::marker::PhantomData;
 
 use crate::common::{ConnectionId, PacketNumber, VarInt};
@@ -49,9 +50,10 @@ impl<S: Server> Connection<S> {
                         token,
                         packet_number,
                     })?;
-                    let mut data = S::Crypto::decrypt_initial_data(dst_cid, version, false, data)?;
+                    let mut payload =
+                        S::Crypto::decrypt_initial_data(dst_cid, version, false, &mut data)?;
                     // TODO there are multiple frames...
-                    self.handle_raw_frame(&mut data)?;
+                    self.handle_raw_frame(&mut payload)?;
                 }
                 0b01 => {
                     // 0-RTT packet
