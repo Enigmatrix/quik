@@ -1,5 +1,5 @@
-use std::io;
 use quecto_util::*;
+use std::io;
 
 pub struct PacketNumber;
 
@@ -96,10 +96,7 @@ mod tests {
         let buf = vec![0b0011_0101, 0x34];
         let mut bufref = &buf[..];
         let res = VarInt::parse(&mut bufref);
-        assert_eq!(
-            res.ok(),
-            Some(VarInt { inner: 0b0011_0101 })
-        );
+        assert_eq!(res.ok(), Some(VarInt { inner: 0b0011_0101 }));
         assert_eq!(bufref, &[0x34]);
     }
 
@@ -108,10 +105,7 @@ mod tests {
         let buf = vec![0b0110_0101, 0x34, 0x12];
         let mut bufref = &buf[..];
         let res = VarInt::parse(&mut bufref);
-        assert_eq!(
-            res.ok(),
-            Some(VarInt { inner: 0x2534 })
-        );
+        assert_eq!(res.ok(), Some(VarInt { inner: 0x2534 }));
         assert_eq!(bufref, &[0x12]);
     }
 
@@ -120,10 +114,7 @@ mod tests {
         let buf = vec![0b1010_0101, 0x12, 0x34, 0x56, 0x78];
         let mut bufref = &buf[..];
         let res = VarInt::parse(&mut bufref);
-        assert_eq!(
-            res.ok(),
-            Some(VarInt { inner: 0x25123456 })
-        );
+        assert_eq!(res.ok(), Some(VarInt { inner: 0x25123456 }));
         assert_eq!(bufref, &[0x78]);
     }
 
@@ -134,7 +125,9 @@ mod tests {
         let res = VarInt::parse(&mut bufref);
         assert_eq!(
             res.ok(),
-            Some(VarInt { inner: 0x2512345678901122 })
+            Some(VarInt {
+                inner: 0x2512345678901122
+            })
         );
         assert_eq!(bufref, &[0xaa]);
     }
@@ -210,7 +203,6 @@ mod tests {
             .map(|e| e.kind());
         assert_eq!(kind, Some(io::ErrorKind::UnexpectedEof));
     }
-
 
     #[test]
     fn connid_parse_no_bytes_fails() {

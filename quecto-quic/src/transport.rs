@@ -1,10 +1,14 @@
+use std::marker::PhantomData;
+
 use crate::common::{ConnectionId, PacketNumber, VarInt};
+use crate::crypto::Crypto;
 use crate::packet::InitialPacket;
+use crate::server::Server;
 use quecto_util::*;
 
-pub struct Connection;
+pub struct Connection<S: Server>(PhantomData<S>);
 
-impl Connection {
+impl<S: Server> Connection<S> {
     pub fn send(&self, data: &[u8]) {
         // Send data
     }
@@ -40,13 +44,15 @@ impl Connection {
                         PacketNumber::parse(&mut data, 1 + packet_number_length as usize)?;
                     self.handle_initial_packet(InitialPacket {
                         src_conn_id,
-                        dest_conn_id,
+                        dest_conn_id: dest_conn_id.clone(),
                         version,
                         token,
                         packet_number,
                     })?;
+                    let mut data =
+                        S::Crypto::decrypt_initial_data(dest_conn_id, version, false, data)?;
                     // TODO there are multiple frames...
-                    self.handle_raw_frame(data)?;
+                    self.handle_raw_frame(&mut data)?;
                 }
                 0b01 => {
                     // 0-RTT packet
@@ -73,7 +79,7 @@ impl Connection {
         todo!()
     }
 
-    fn handle_raw_frame(&self, data: &[u8]) -> Result<()> {
+    fn handle_raw_frame(&self, data: &mut impl Buffer) -> Result<()> {
         todo!()
     }
 }
