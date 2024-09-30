@@ -9,7 +9,7 @@ Default crypto primitives for the `qwik` QUIC library
 """
 
 [dependencies]
-qwik-util = { path = "../qwik-util" }
-qwik-core = { path = "../qwik-core" }
+qwik-util = { path = "../qwik-util", version = "0.3" }
+qwik-core = { path = "../qwik-core", version = "0.3" }
 hkdf = "0.12.4"
 ring = "0.17.8"

@@ -9,4 +9,4 @@ Core protocol implementation for the `qwik` QUIC library
 """
 
 [dependencies]
-qwik-util = { path = "../qwik-util" }
+qwik-util = { path = "../qwik-util", version = "0.3" }

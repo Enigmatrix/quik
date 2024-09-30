@@ -9,5 +9,5 @@ The `qwik` QUIC library
 """
 
 [dependencies]
-qwik-core = { path = "../qwik-core" }
-qwik-crypto = { path = "../qwik-crypto" }
+qwik-core = { path = "../qwik-core", version = "0.3" }
+qwik-crypto = { path = "../qwik-crypto", version = "0.3" }
