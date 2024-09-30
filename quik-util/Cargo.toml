@@ -1,11 +1,11 @@
 [package]
-name = "qwik-util"
+name = "quik-util"
 version = "0.0.4"
 edition = "2021"
 license = "MIT"
-repository = "https://github.com/Enigmatrix/qwik"
+repository = "https://github.com/Enigmatrix/quik"
 description = """
-Utilities for the `qwik` QUIC library
+Utilities for the `quik` QUIC library
 """
 
 [dependencies]

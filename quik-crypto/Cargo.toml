@@ -1,0 +1,15 @@
+[package]
+name = "quik-crypto"
+version = "0.0.4"
+edition = "2021"
+license = "MIT"
+repository = "https://github.com/Enigmatrix/quik"
+description = """
+Default crypto primitives for the `quik` QUIC library
+"""
+
+[dependencies]
+quik-util = { path = "../quik-util", version = "0.0.4" }
+quik-core = { path = "../quik-core", version = "0.0.4" }
+hkdf = "0.12.4"
+ring = "0.17.8"

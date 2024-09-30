@@ -1,5 +1,5 @@
 use crate::common::ConnectionId;
-use qwik_util::*;
+use quik_util::*;
 // Packets handled by the middle layer
 
 pub struct VersionNegotiationPacket<'a> {

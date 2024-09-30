@@ -1,4 +1,4 @@
-use qwik_util::*;
+use quik_util::*;
 use std::io;
 
 pub struct PacketNumber;

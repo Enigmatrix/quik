@@ -4,7 +4,7 @@ use crate::common::{ConnectionId, PacketNumber, VarInt};
 use crate::crypto::Crypto;
 use crate::packet::InitialPacket;
 use crate::server::Server;
-use qwik_util::*;
+use quik_util::*;
 
 pub struct Connection<S: Server>(PhantomData<S>);
 

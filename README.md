@@ -1,2 +1,2 @@
-# qwik-quic
+# quik
 Tiny QUIC Protocol for learning purposes
