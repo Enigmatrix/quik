@@ -6,6 +6,7 @@ pub struct DefaultCrypto;
 
 impl Crypto for DefaultCrypto {
     fn decrypt_initial_data(
+        &self,
         cid: ConnectionId,
         version: u32,
         is_server: bool,

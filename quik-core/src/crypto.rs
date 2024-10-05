@@ -3,6 +3,7 @@ use quik_util::*;
 
 pub trait Crypto {
     fn decrypt_initial_data(
+        &self,
         cid: ConnectionId,
         version: u32,
         is_server: bool,

@@ -1,15 +1,20 @@
-use std::io::Read;
-use std::marker::PhantomData;
-
 use crate::common::{ConnectionId, PacketNumber, VarInt};
 use crate::crypto::Crypto;
 use crate::packet::InitialPacket;
-use crate::server::Server;
 use quik_util::*;
 
-pub struct Connection<S: Server>(PhantomData<S>);
+pub trait Io {
+    fn send(&self, data: &[u8]) -> Result<()>;
+    fn recv(&self, data: &mut [u8]) -> Result<()>;
+    fn close(self);
+}
 
-impl<S: Server> Connection<S> {
+pub struct Connection<C: Crypto, I: Io> {
+    crypto: C,
+    io: I,
+}
+
+impl<C: Crypto, I: Io> Connection<C, I> {
     pub fn send(&self, data: &[u8]) {
         // Send data
     }
@@ -51,7 +56,7 @@ impl<S: Server> Connection<S> {
                         packet_number,
                     })?;
                     let mut payload =
-                        S::Crypto::decrypt_initial_data(dst_cid, version, false, &mut data)?;
+                        self.crypto.decrypt_initial_data(dst_cid, version, false, &mut data)?;
                     // TODO there are multiple frames...
                     self.handle_raw_frame(&mut payload)?;
                 }
