@@ -5,7 +5,7 @@ use quik_util::*;
 pub struct DefaultCrypto;
 
 impl Crypto for DefaultCrypto {
-    fn decrypt_initial_data(
+    async fn decrypt_initial_data(
         &self,
         cid: ConnectionId,
         version: u32,

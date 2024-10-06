@@ -5,9 +5,9 @@ use crate::server::Handler;
 use quik_util::*;
 
 pub trait Io {
-    fn send(&self, data: &[u8]) -> Result<()>;
-    fn recv(&self, data: &mut [u8]) -> Result<()>;
-    fn close(self);
+    fn send(&self, data: &[u8]) -> impl Future<Output = Result<()>>;
+    fn recv(&self, data: &mut [u8]) -> impl Future<Output = Result<()>>;
+    fn close(self) -> impl Future<Output = ()>;
 }
 
 pub struct Connection<C: Crypto, I: Io, H: Handler> {
@@ -21,7 +21,7 @@ impl<C: Crypto, I: Io, H: Handler> Connection<C, I, H> {
         // Send data
     }
 
-    pub fn recv(&self, mut data: &[u8]) -> Result<()> {
+    pub async fn recv(&self, mut data: &[u8]) -> Result<()> {
         let first_byte = data.read_u8()?;
         // Header Form (1) bit
         if first_byte >> 7 != 0 {
@@ -50,15 +50,19 @@ impl<C: Crypto, I: Io, H: Handler> Connection<C, I, H> {
                         .ok_or_else(|| "Token too long")?;
                     let packet_number =
                         PacketNumber::parse(&mut data, 1 + packet_number_length as usize)?;
-                    self.handler.handle_initial_packet(InitialPacket {
+                    self.handler
+                        .handle_initial_packet(InitialPacket {
                             src_cid,
                             dst_cid: dst_cid.clone(),
                             version,
                             token,
                             packet_number,
-                        })?;
-                    let mut payload =
-                        self.crypto.decrypt_initial_data(dst_cid, version, false, &mut data)?;
+                        })
+                        .await?;
+                    let mut payload = self
+                        .crypto
+                        .decrypt_initial_data(dst_cid, version, false, &mut data)
+                        .await?;
                     // TODO there are multiple frames...
                     self.handle_raw_frame(&mut payload)?;
                 }

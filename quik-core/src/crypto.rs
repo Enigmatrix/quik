@@ -8,5 +8,5 @@ pub trait Crypto {
         version: u32,
         is_server: bool,
         data: &mut impl Buffer,
-    ) -> Result<impl Buffer>;
+    ) -> impl Future<Output = Result<impl Buffer>>;
 }

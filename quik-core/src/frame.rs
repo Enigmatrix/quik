@@ -20,7 +20,7 @@ pub enum Frame<'a> {
     PathChallenge(PathChallenge),
     PathResponse(PathResponse),
     ConnectionClose(ConnectionClose<'a>),
-    HandshakeDone
+    HandshakeDone,
 }
 
 pub struct Padding;

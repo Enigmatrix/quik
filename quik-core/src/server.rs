@@ -7,8 +7,8 @@ use quik_util::*;
 
 // if this needs to be mutable inside, then it should use a mutex internally
 pub trait Handler {
-    fn handle_initial_packet(&self, packet: InitialPacket) -> Result<()>;
-    fn handle_frame(&self, frame: Frame) -> Result<()>;
+    fn handle_initial_packet(&self, packet: InitialPacket) -> impl Future<Output = Result<()>>;
+    fn handle_frame(&self, frame: Frame) -> impl Future<Output = Result<()>>;
 }
 
 pub trait Server {
