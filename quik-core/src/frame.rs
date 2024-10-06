@@ -217,13 +217,7 @@ impl<'a> Frame<'a> {
                 // https://datatracker.ietf.org/doc/html/rfc9000#name-crypto-frames
                 let offset = VarInt::parse(&mut data)?;
                 let length = VarInt::parse(&mut data)?;
-                let (_, rem_data) = data
-                    .split_at_checked(offset.into())
-                    .ok_or_else(|| "Not enough bytes for Crypto Offset")?;
-                let (crypto_data, rem_data) = rem_data
-                    .split_at_checked(length.into())
-                    .ok_or_else(|| "Not enough bytes for Crypto Length")?;
-                data = rem_data;
+                let crypto_data = data.extract(Some(offset.into()), Some(length.into()))?;
 
                 Frame::Crypto(Crypto { data: crypto_data })
             }
@@ -231,10 +225,7 @@ impl<'a> Frame<'a> {
                 // New Token
                 // https://datatracker.ietf.org/doc/html/rfc9000#name-new_token-frames
                 let token_length = VarInt::parse(&mut data)?;
-                let (token, rem_data) = data
-                    .split_at_checked(token_length.into())
-                    .ok_or_else(|| "Not enough bytes for Token")?;
-                data = rem_data;
+                let token = data.slice(token_length.into())?;
 
                 Frame::NewToken(NewToken { token })
             }
@@ -247,23 +238,16 @@ impl<'a> Frame<'a> {
 
                 let stream_id = VarInt::parse(&mut data)?;
                 let offset = if off_bit != 0 {
-                    Some(VarInt::parse(&mut data)?)
+                    Some(VarInt::parse(&mut data)?.into())
                 } else {
                     None
                 };
                 let length = if len_bit != 0 {
-                    Some(VarInt::parse(&mut data)?)
+                    Some(VarInt::parse(&mut data)?.into())
                 } else {
                     None
                 };
-
-                let (_, rem_data) = data
-                    .split_at_checked(offset.unwrap_or(VarInt::ZERO).into())
-                    .ok_or_else(|| "Not enough bytes for Stream Offset")?;
-                let (stream_data, rem_data) = rem_data
-                    .split_at_checked(length.unwrap_or(VarInt::ZERO).into())
-                    .ok_or_else(|| "Not enough bytes for Stream Length")?;
-                data = rem_data;
+                let stream_data = data.extract(offset.into(), length.into())?;
 
                 Frame::Stream(Stream {
                     stream_id,
@@ -369,10 +353,7 @@ impl<'a> Frame<'a> {
                     None
                 };
                 let reason_phrase_length = VarInt::parse(&mut data)?;
-                let (reason_phrase, rem_data) = data
-                    .split_at_checked(reason_phrase_length.into())
-                    .ok_or_else(|| "Not enough bytes for Reason Phrase")?;
-                data = rem_data;
+                let reason_phrase = data.slice(reason_phrase_length.into())?;
 
                 Frame::ConnectionClose(ConnectionClose {
                     err_code,

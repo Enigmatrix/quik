@@ -120,10 +120,7 @@ impl<'a> Packet<'a> {
                     // https://datatracker.ietf.org/doc/html/rfc9000#name-initial-packet
 
                     let token_length = VarInt::parse(&mut data)?;
-                    let (token, rem_data) = data
-                        .split_at_checked(token_length.into())
-                        .ok_or_else(|| "Token too long")?;
-                    data = rem_data;
+                    let token = data.slice(token_length.into())?;
                     let length = VarInt::parse(&mut data)?; // TODO use this
                     let packet_number = PacketNumber::parse(&mut data, packet_number_length)?;
 
