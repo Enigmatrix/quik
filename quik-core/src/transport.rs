@@ -1,6 +1,7 @@
 use crate::common::{ConnectionId, PacketNumber, VarInt};
 use crate::crypto::Crypto;
 use crate::packet::InitialPacket;
+use crate::server::Handler;
 use quik_util::*;
 
 pub trait Io {
@@ -9,12 +10,13 @@ pub trait Io {
     fn close(self);
 }
 
-pub struct Connection<C: Crypto, I: Io> {
+pub struct Connection<C: Crypto, I: Io, H: Handler> {
     crypto: C,
     io: I,
+    handler: H,
 }
 
-impl<C: Crypto, I: Io> Connection<C, I> {
+impl<C: Crypto, I: Io, H: Handler> Connection<C, I, H> {
     pub fn send(&self, data: &[u8]) {
         // Send data
     }
@@ -48,13 +50,13 @@ impl<C: Crypto, I: Io> Connection<C, I> {
                         .ok_or_else(|| "Token too long")?;
                     let packet_number =
                         PacketNumber::parse(&mut data, 1 + packet_number_length as usize)?;
-                    self.handle_initial_packet(InitialPacket {
-                        src_cid,
-                        dst_cid: dst_cid.clone(),
-                        version,
-                        token,
-                        packet_number,
-                    })?;
+                    self.handler.handle_initial_packet(InitialPacket {
+                            src_cid,
+                            dst_cid: dst_cid.clone(),
+                            version,
+                            token,
+                            packet_number,
+                        })?;
                     let mut payload =
                         self.crypto.decrypt_initial_data(dst_cid, version, false, &mut data)?;
                     // TODO there are multiple frames...
@@ -79,10 +81,6 @@ impl<C: Crypto, I: Io> Connection<C, I> {
 
     pub fn close(self) {
         // Close connection
-    }
-
-    fn handle_initial_packet(&self, packet: InitialPacket<'_>) -> Result<()> {
-        todo!()
     }
 
     fn handle_raw_frame(&self, data: &mut impl Buffer) -> Result<()> {

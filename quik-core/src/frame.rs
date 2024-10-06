@@ -1,5 +1,28 @@
 use crate::common::{ConnectionId, StreamId, VarInt};
 
+pub enum Frame<'a> {
+    Padding,
+    Ping,
+    Ack(Ack),
+    ResetStream(ResetStream),
+    StopSending(StopSending),
+    Crypto(Crypto<'a>),
+    NewToken(NewToken<'a>),
+    Stream(Stream<'a>),
+    MaxData(MaxData),
+    MaxStreamData(MaxStreamData),
+    MaxStreams(MaxStreams),
+    DataBlocked(DataBlocked),
+    StreamDataBlocked(StreamDataBlocked),
+    StreamsBlocked(StreamsBlocked),
+    NewConnectionId(NewConnectionId),
+    RetireConnectionId(RetireConnectionId),
+    PathChallenge(PathChallenge),
+    PathResponse(PathResponse),
+    ConnectionClose(ConnectionClose<'a>),
+    HandshakeDone
+}
+
 pub struct Padding;
 
 pub struct Ping;
