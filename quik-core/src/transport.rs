@@ -196,16 +196,16 @@ impl<C: Crypto, I: Io, H: Handler> Connection<C, I, H> {
 
     async fn parse_frame<'a>(&'a self, mut data: &'a [u8]) -> Result<&'a [u8]> {
         let typ: usize = VarInt::parse(&mut data)?.into();
-        match typ {
+        let frame = match typ {
             0x00 => {
                 // Padding
                 // https://datatracker.ietf.org/doc/html/rfc9000#name-padding-frames
-                self.handler.handle_frame(Frame::Padding).await?;
+                Frame::Padding
             }
             0x01 => {
                 // Ping
                 // https://datatracker.ietf.org/doc/html/rfc9000#name-ping-frames
-                self.handler.handle_frame(Frame::Ping).await?;
+                Frame::Ping
             }
             0x02..=0x03 => {
                 // Ack
@@ -232,16 +232,14 @@ impl<C: Crypto, I: Io, H: Handler> Connection<C, I, H> {
                     None
                 };
 
-                self.handler
-                    .handle_frame(Frame::Ack(frame::Ack {
-                        largest_acked,
-                        ack_delay,
-                        ack_range_count,
-                        first_ack_range,
-                        ack_ranges,
-                        ecn_counts,
-                    }))
-                    .await?;
+                Frame::Ack(frame::Ack {
+                    largest_acked,
+                    ack_delay,
+                    ack_range_count,
+                    first_ack_range,
+                    ack_ranges,
+                    ecn_counts,
+                })
             }
             0x04 => {
                 // Reset Stream
@@ -250,13 +248,11 @@ impl<C: Crypto, I: Io, H: Handler> Connection<C, I, H> {
                 let err_code = VarInt::parse(&mut data)?;
                 let final_size = VarInt::parse(&mut data)?;
 
-                self.handler
-                    .handle_frame(Frame::ResetStream(frame::ResetStream {
-                        stream_id,
-                        err_code,
-                        final_size,
-                    }))
-                    .await?;
+                Frame::ResetStream(frame::ResetStream {
+                    stream_id,
+                    err_code,
+                    final_size,
+                })
             }
             0x05 => {
                 // Stop Sending
@@ -264,12 +260,10 @@ impl<C: Crypto, I: Io, H: Handler> Connection<C, I, H> {
                 let stream_id = VarInt::parse(&mut data)?;
                 let err_code = VarInt::parse(&mut data)?;
 
-                self.handler
-                    .handle_frame(Frame::StopSending(frame::StopSending {
-                        stream_id,
-                        err_code,
-                    }))
-                    .await?;
+                Frame::StopSending(frame::StopSending {
+                    stream_id,
+                    err_code,
+                })
             }
             0x06 => {
                 // Crypto
@@ -284,9 +278,7 @@ impl<C: Crypto, I: Io, H: Handler> Connection<C, I, H> {
                     .ok_or_else(|| "Not enough bytes for Crypto Length")?;
                 data = rem_data;
 
-                self.handler
-                    .handle_frame(Frame::Crypto(frame::Crypto { data: crypto_data }))
-                    .await?;
+                Frame::Crypto(frame::Crypto { data: crypto_data })
             }
             0x07 => {
                 // New Token
@@ -297,9 +289,7 @@ impl<C: Crypto, I: Io, H: Handler> Connection<C, I, H> {
                     .ok_or_else(|| "Not enough bytes for Token")?;
                 data = rem_data;
 
-                self.handler
-                    .handle_frame(Frame::NewToken(frame::NewToken { token }))
-                    .await?;
+                Frame::NewToken(frame::NewToken { token })
             }
             0x08..=0x0f => {
                 // Stream
@@ -328,22 +318,18 @@ impl<C: Crypto, I: Io, H: Handler> Connection<C, I, H> {
                     .ok_or_else(|| "Not enough bytes for Stream Length")?;
                 data = rem_data;
 
-                self.handler
-                    .handle_frame(Frame::Stream(frame::Stream {
-                        stream_id,
-                        data: stream_data,
-                        fin: fin_bit != 0,
-                    }))
-                    .await?;
+                Frame::Stream(frame::Stream {
+                    stream_id,
+                    data: stream_data,
+                    fin: fin_bit != 0,
+                })
             }
             0x10 => {
                 // Max Data
                 // https://datatracker.ietf.org/doc/html/rfc9000#name-max_data-frames
                 let max_data = VarInt::parse(&mut data)?;
 
-                self.handler
-                    .handle_frame(Frame::MaxData(frame::MaxData { max_data }))
-                    .await?;
+                Frame::MaxData(frame::MaxData { max_data })
             }
             0x11 => {
                 // Max Stream Data
@@ -351,12 +337,10 @@ impl<C: Crypto, I: Io, H: Handler> Connection<C, I, H> {
                 let stream_id = VarInt::parse(&mut data)?;
                 let max_stream_data = VarInt::parse(&mut data)?;
 
-                self.handler
-                    .handle_frame(Frame::MaxStreamData(frame::MaxStreamData {
-                        stream_id,
-                        max_stream_data,
-                    }))
-                    .await?;
+                Frame::MaxStreamData(frame::MaxStreamData {
+                    stream_id,
+                    max_stream_data,
+                })
             }
             0x12..=0x13 => {
                 // Max Streams
@@ -364,18 +348,14 @@ impl<C: Crypto, I: Io, H: Handler> Connection<C, I, H> {
                 let max_streams = VarInt::parse(&mut data)?;
                 // TODO 0x12 is bidirectional, 0x13 is unidirectional. Does this matter?
 
-                self.handler
-                    .handle_frame(Frame::MaxStreams(frame::MaxStreams { max_streams }))
-                    .await?;
+                Frame::MaxStreams(frame::MaxStreams { max_streams })
             }
             0x14 => {
                 // Data Blocked
                 // https://datatracker.ietf.org/doc/html/rfc9000#name-data_blocked-frames
                 let max_data = VarInt::parse(&mut data)?;
 
-                self.handler
-                    .handle_frame(Frame::DataBlocked(frame::DataBlocked { max_data }))
-                    .await?;
+                Frame::DataBlocked(frame::DataBlocked { max_data })
             }
             0x15 => {
                 // Stream Data Blocked
@@ -383,12 +363,10 @@ impl<C: Crypto, I: Io, H: Handler> Connection<C, I, H> {
                 let stream_id = VarInt::parse(&mut data)?;
                 let max_stream_data = VarInt::parse(&mut data)?;
 
-                self.handler
-                    .handle_frame(Frame::StreamDataBlocked(frame::StreamDataBlocked {
-                        stream_id,
-                        max_stream_data,
-                    }))
-                    .await?;
+                Frame::StreamDataBlocked(frame::StreamDataBlocked {
+                    stream_id,
+                    max_stream_data,
+                })
             }
             0x16..=0x17 => {
                 // Streams Blocked
@@ -396,9 +374,7 @@ impl<C: Crypto, I: Io, H: Handler> Connection<C, I, H> {
                 let max_streams = VarInt::parse(&mut data)?;
                 // TODO 0x16 is bidirectional, 0x17 is unidirectional. Does this matter?
 
-                self.handler
-                    .handle_frame(Frame::StreamsBlocked(frame::StreamsBlocked { max_streams }))
-                    .await?;
+                Frame::StreamsBlocked(frame::StreamsBlocked { max_streams })
             }
             0x18 => {
                 // New Connection ID
@@ -408,43 +384,33 @@ impl<C: Crypto, I: Io, H: Handler> Connection<C, I, H> {
                 let cid = ConnectionId::parse(&mut data)?;
                 let stateless_reset_token = data.read_u128::<NetworkEndian>()?;
 
-                self.handler
-                    .handle_frame(Frame::NewConnectionId(frame::NewConnectionId {
-                        seq_num,
-                        retire_prior_to,
-                        cid,
-                        stateless_reset_token,
-                    }))
-                    .await?;
+                Frame::NewConnectionId(frame::NewConnectionId {
+                    seq_num,
+                    retire_prior_to,
+                    cid,
+                    stateless_reset_token,
+                })
             }
             0x19 => {
                 // Retire Connection ID
                 // https://datatracker.ietf.org/doc/html/rfc9000#name-retire_connection_id-frames
                 let seq_num = VarInt::parse(&mut data)?;
 
-                self.handler
-                    .handle_frame(Frame::RetireConnectionId(frame::RetireConnectionId {
-                        seq_num,
-                    }))
-                    .await?;
+                Frame::RetireConnectionId(frame::RetireConnectionId { seq_num })
             }
             0x1a => {
                 // Path Challenge
                 // https://datatracker.ietf.org/doc/html/rfc9000#name-path_challenge-frames
                 let data = data.read_u64::<NetworkEndian>()?;
 
-                self.handler
-                    .handle_frame(Frame::PathChallenge(frame::PathChallenge { data }))
-                    .await?;
+                Frame::PathChallenge(frame::PathChallenge { data })
             }
             0x1b => {
                 // Path Response
                 // https://datatracker.ietf.org/doc/html/rfc9000#name-path_response-frames
                 let data = data.read_u64::<NetworkEndian>()?;
 
-                self.handler
-                    .handle_frame(Frame::PathResponse(frame::PathResponse { data }))
-                    .await?;
+                Frame::PathResponse(frame::PathResponse { data })
             }
             0x1c..=0x1d => {
                 // Connection Close
@@ -461,23 +427,21 @@ impl<C: Crypto, I: Io, H: Handler> Connection<C, I, H> {
                     .ok_or_else(|| "Not enough bytes for Reason Phrase")?;
                 data = rem_data;
 
-                self.handler
-                    .handle_frame(Frame::ConnectionClose(frame::ConnectionClose {
-                        err_code,
-                        frame_type,
-                        reason_phrase,
-                    }))
-                    .await?;
+                Frame::ConnectionClose(frame::ConnectionClose {
+                    err_code,
+                    frame_type,
+                    reason_phrase,
+                })
             }
             0x1e => {
                 // Handshake Done
                 // https://datatracker.ietf.org/doc/html/rfc9000#name-handshake_done-frames
-                self.handler.handle_frame(Frame::HandshakeDone).await?;
+                Frame::HandshakeDone
             }
-            _ => {
-                Err("Unknown frame type")?;
-            }
-        }
+            _ => Err("Unknown frame type")?,
+        };
+
+        self.handler.handle_frame(frame).await?;
         Ok(data)
     }
 }
