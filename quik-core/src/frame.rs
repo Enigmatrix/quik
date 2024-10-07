@@ -128,7 +128,20 @@ pub struct ConnectionClose<'a> {
 pub struct HandshakeDone;
 
 impl<'a> Frame<'a> {
-    pub async fn parse(mut data: &'a [u8]) -> Result<(Frame<'a>, &'a [u8])> {
+    pub fn parse_multiple(mut data: &'a [u8]) -> impl Iterator<Item = Result<Frame<'a>>> {
+        std::iter::from_fn(move || {
+            if !data.is_empty() {
+                Some(Frame::parse(data).map(|(frame, rem_data)| {
+                    data = rem_data;
+                    frame
+                }))
+            } else {
+                None
+            }
+        })
+    }
+
+    pub fn parse(mut data: &'a [u8]) -> Result<(Frame<'a>, &'a [u8])> {
         let typ: usize = VarInt::parse(&mut data)?.into();
         let frame = match typ {
             0x00 => {

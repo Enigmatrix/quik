@@ -190,7 +190,7 @@ impl<C: Crypto, I: Io, H: Handler> Connection<C, I, H> {
     async fn handle_payload(&self, mut data: &[u8]) -> Result<()> {
         while !data.is_empty() {
             let frame;
-            (frame, data) = Frame::parse(data).await?;
+            (frame, data) = Frame::parse(data)?;
             self.handler.handle_frame(frame).await?;
         }
         Ok(())
