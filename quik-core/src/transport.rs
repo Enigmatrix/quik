@@ -215,7 +215,22 @@ impl<C: Crypto, I: Io, H: Handler> Connection<C, I, H> {
                 let ack_range_count = VarInt::parse(&mut data)?;
                 let first_ack_range = VarInt::parse(&mut data)?;
 
-                // TODO
+                let ack_ranges = (0..ack_range_count.clone().into())
+                    .map(|_| {
+                        let gap = VarInt::parse(&mut data)?;
+                        let range_length = VarInt::parse(&mut data)?;
+                        Ok(frame::AckRange { gap, range_length })
+                    })
+                    .collect::<Result<Vec<_>>>()?;
+
+                let ecn_counts = if typ == 0x03 {
+                    let ect0 = VarInt::parse(&mut data)?;
+                    let ect1 = VarInt::parse(&mut data)?;
+                    let ce = VarInt::parse(&mut data)?;
+                    Some(frame::EcnCounts { ect0, ect1, ce })
+                } else {
+                    None
+                };
 
                 self.handler
                     .handle_frame(Frame::Ack(frame::Ack {
@@ -223,8 +238,8 @@ impl<C: Crypto, I: Io, H: Handler> Connection<C, I, H> {
                         ack_delay,
                         ack_range_count,
                         first_ack_range,
-                        ack_range: todo!(),
-                        ecn_counts: todo!(),
+                        ack_ranges,
+                        ecn_counts,
                     }))
                     .await?;
             }

@@ -43,8 +43,8 @@ pub struct Ack {
     pub ack_delay: VarInt,
     pub ack_range_count: VarInt,
     pub first_ack_range: VarInt,
-    pub ack_range: Vec<AckRange>,
-    pub ecn_counts: Vec<EcnCounts>,
+    pub ack_ranges: Vec<AckRange>,
+    pub ecn_counts: Option<EcnCounts>,
 }
 
 pub struct ResetStream {
