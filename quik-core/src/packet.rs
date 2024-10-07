@@ -1,6 +1,14 @@
 use crate::common::ConnectionId;
-use quik_util::*;
 // Packets handled by the middle layer
+
+pub enum Packet<'a> {
+    VersionNegotiation(VersionNegotiationPacket<'a>),
+    Initial(InitialPacket<'a>),
+    ZeroRTT(ZeroRTTPacket),
+    Handshake(HandshakePacket),
+    Retry(RetryPacket<'a>),
+    OneRtt(OneRttPacket),
+}
 
 pub struct VersionNegotiationPacket<'a> {
     pub src_cid: ConnectionId,

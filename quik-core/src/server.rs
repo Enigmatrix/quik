@@ -1,13 +1,13 @@
 use crate::crypto::Crypto;
 use crate::frame::Frame;
-use crate::packet::InitialPacket;
+use crate::packet::Packet;
 use crate::transport::Io;
 
 use quik_util::*;
 
 // if this needs to be mutable inside, then it should use a mutex internally
 pub trait Handler {
-    fn handle_initial_packet(&self, packet: InitialPacket) -> impl Future<Output = Result<()>>;
+    fn handle_packet(&self, packet: Packet) -> impl Future<Output = Result<()>>;
     fn handle_frame(&self, frame: Frame) -> impl Future<Output = Result<()>>;
 }
 
