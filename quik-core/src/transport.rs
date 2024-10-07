@@ -1,8 +1,9 @@
 use std::io;
+use std::iter::Empty;
 
 use crate::common::{ConnectionId, PacketNumber, VarInt};
 use crate::crypto::Crypto;
-use crate::frame::{self, Frame};
+use crate::frame::Frame;
 use crate::packet::{self, Packet};
 use crate::server::Handler;
 use quik_util::*;
@@ -55,11 +56,14 @@ impl<C: Crypto, I: Io, H: Handler> Connection<C, I, H> {
                 // TODO check remainder?
 
                 self.handler
-                    .handle_packet(Packet::VersionNegotiation(packet::VersionNegotiation {
-                        src_cid,
-                        dst_cid: dst_cid.clone(),
-                        supported_versions: &versions,
-                    }))
+                    .handle(
+                        Packet::VersionNegotiation(packet::VersionNegotiation {
+                            src_cid,
+                            dst_cid: dst_cid.clone(),
+                            supported_versions: &versions,
+                        }),
+                        Empty::default(),
+                    )
                     .await?;
                 return Ok(());
             }
@@ -76,20 +80,20 @@ impl<C: Crypto, I: Io, H: Handler> Connection<C, I, H> {
                     let length = VarInt::parse(&mut data)?; // TODO use this
                     let packet_number = PacketNumber::parse(&mut data, packet_number_length)?;
 
-                    self.handler
-                        .handle_packet(Packet::Initial(packet::Initial {
-                            src_cid,
-                            dst_cid: dst_cid.clone(),
-                            version,
-                            token,
-                            packet_number,
-                        }))
-                        .await?;
-                    let mut payload = self
+                    let packet = Packet::Initial(packet::Initial {
+                        src_cid,
+                        dst_cid: dst_cid.clone(),
+                        version,
+                        token,
+                        packet_number,
+                    });
+                    let payload = self
                         .crypto
                         .decrypt_initial_data(dst_cid, version, false, &mut data)
                         .await?;
-                    self.handle_payload(&mut payload).await?;
+                    self.handler
+                        .handle(packet, Frame::parse_multiple(&payload))
+                        .await?;
                 }
                 0b01 => {
                     // 0-RTT packet
@@ -97,17 +101,17 @@ impl<C: Crypto, I: Io, H: Handler> Connection<C, I, H> {
 
                     let length = VarInt::parse(&mut data)?; // TODO use this
                     let packet_number = PacketNumber::parse(&mut data, packet_number_length)?;
-                    let mut payload = data; // TODO: decrypt
+                    let payload = data; // TODO: decrypt
 
+                    let packet = Packet::ZeroRTT(packet::ZeroRTT {
+                        src_cid,
+                        dst_cid: dst_cid.clone(),
+                        version,
+                        packet_number,
+                    });
                     self.handler
-                        .handle_packet(Packet::ZeroRTT(packet::ZeroRTT {
-                            src_cid,
-                            dst_cid: dst_cid.clone(),
-                            version,
-                            packet_number,
-                        }))
+                        .handle(packet, Frame::parse_multiple(&payload))
                         .await?;
-                    self.handle_payload(&mut payload).await?;
                 }
                 0b10 => {
                     // Handshake packet
@@ -115,17 +119,17 @@ impl<C: Crypto, I: Io, H: Handler> Connection<C, I, H> {
 
                     let length = VarInt::parse(&mut data)?; // TODO use this
                     let packet_number = PacketNumber::parse(&mut data, packet_number_length)?;
-                    let mut payload = data; // TODO: decrypt
+                    let payload = data; // TODO: decrypt
 
+                    let packet = Packet::Handshake(packet::Handshake {
+                        src_cid,
+                        dst_cid: dst_cid.clone(),
+                        version,
+                        packet_number,
+                    });
                     self.handler
-                        .handle_packet(Packet::Handshake(packet::Handshake {
-                            src_cid,
-                            dst_cid: dst_cid.clone(),
-                            version,
-                            packet_number,
-                        }))
+                        .handle(packet, Frame::parse_multiple(&payload))
                         .await?;
-                    self.handle_payload(&mut payload).await?;
                 }
                 0b11 => {
                     // Retry packet
@@ -139,13 +143,16 @@ impl<C: Crypto, I: Io, H: Handler> Connection<C, I, H> {
                         (&retry_integrity_tag[..]).read_u128::<NetworkEndian>()?;
 
                     self.handler
-                        .handle_packet(Packet::Retry(packet::Retry {
-                            src_cid,
-                            dst_cid: dst_cid.clone(),
-                            version,
-                            retry_token,
-                            retry_integrity_tag,
-                        }))
+                        .handle(
+                            Packet::Retry(packet::Retry {
+                                src_cid,
+                                dst_cid: dst_cid.clone(),
+                                version,
+                                retry_token,
+                                retry_integrity_tag,
+                            }),
+                            Empty::default(),
+                        )
                         .await?;
                 }
                 _ => unreachable!(),
@@ -168,31 +175,22 @@ impl<C: Crypto, I: Io, H: Handler> Connection<C, I, H> {
             // Currently 1-RTT packets are the only Short Header packets
             // https://datatracker.ietf.org/doc/html/rfc9000#name-1-rtt-packet
             let packet_number = PacketNumber::parse(&mut data, packet_number_length)?;
-            let mut payload = data; // TODO: decrypt
+            let payload = data; // TODO: decrypt
 
+            let packet = Packet::OneRtt(packet::OneRtt {
+                dst_cid: dst_cid.clone(),
+                packet_number,
+                spin,
+                key_phase,
+            });
             self.handler
-                .handle_packet(Packet::OneRtt(packet::OneRtt {
-                    dst_cid: dst_cid.clone(),
-                    packet_number,
-                    spin,
-                    key_phase,
-                }))
+                .handle(packet, Frame::parse_multiple(payload))
                 .await?;
-            self.handle_payload(&mut payload).await?;
         }
         Ok(())
     }
 
     pub fn close(self) {
         // Close connection
-    }
-
-    async fn handle_payload(&self, mut data: &[u8]) -> Result<()> {
-        while !data.is_empty() {
-            let frame;
-            (frame, data) = Frame::parse(data)?;
-            self.handler.handle_frame(frame).await?;
-        }
-        Ok(())
     }
 }
