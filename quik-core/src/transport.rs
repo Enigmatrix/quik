@@ -1,6 +1,6 @@
 use crate::common::{ConnectionId, PacketNumber, VarInt};
 use crate::crypto::Crypto;
-use crate::packet::InitialPacket;
+use crate::packet::{self, InitialPacket};
 use crate::server::Handler;
 use quik_util::*;
 
@@ -33,7 +33,8 @@ impl<C: Crypto, I: Io, H: Handler> Connection<C, I, H> {
             let packet_type = (first_byte >> 4) & 0b11;
             // Reserved (2) - ignored
             // Packet Number Length (2) - not used in Retry & VersionNegotiation
-            let packet_number_length = first_byte & 0b11;
+            let packet_number_length_encoded = first_byte & 0b11;
+            let packet_number_length = 1 + packet_number_length_encoded as usize;
 
             let version = data.read_u32::<NetworkEndian>()?;
             let dst_cid = ConnectionId::parse(&mut data)?;
@@ -41,6 +42,12 @@ impl<C: Crypto, I: Io, H: Handler> Connection<C, I, H> {
 
             if version == 0 {
                 // VersionNegotiation packet
+                // https://datatracker.ietf.org/doc/html/rfc9000#name-version-negotiation-packet
+                let (versions_bytes, _remainder) = data.as_chunks::<4>();
+                let versions = versions_bytes
+                    .iter()
+                    .map(|b| (&b[..]).read_u32::<NetworkEndian>());
+                // TODO handle version negotiation
                 return Ok(());
             }
             match packet_type {
@@ -51,8 +58,7 @@ impl<C: Crypto, I: Io, H: Handler> Connection<C, I, H> {
                         .split_at_checked(token_length.into())
                         .ok_or_else(|| "Token too long")?;
                     let length = VarInt::parse(&mut data)?; // TODO use this
-                    let packet_number =
-                        PacketNumber::parse(&mut data, 1 + packet_number_length as usize)?;
+                    let packet_number = PacketNumber::parse(&mut data, packet_number_length)?;
                     self.handler
                         .handle_initial_packet(InitialPacket {
                             src_cid,
@@ -72,27 +78,26 @@ impl<C: Crypto, I: Io, H: Handler> Connection<C, I, H> {
                     // 0-RTT packet
                     // https://datatracker.ietf.org/doc/html/rfc9000#name-0-rtt
                     let length = VarInt::parse(&mut data)?; // TODO use this
-                    let packet_number =
-                        PacketNumber::parse(&mut data, 1 + packet_number_length as usize)?;
+                    let packet_number = PacketNumber::parse(&mut data, packet_number_length)?;
                     let mut payload = data; // TODO: decrypt
-                    // TODO handle 0-rtt
+                                            // TODO handle 0-rtt
                     self.handle_payload(&mut payload)?;
                 }
                 0b10 => {
                     // Handshake packet
                     // https://datatracker.ietf.org/doc/html/rfc9000#packet-handshake
                     let length = VarInt::parse(&mut data)?; // TODO use this
-                    let packet_number =
-                        PacketNumber::parse(&mut data, 1 + packet_number_length as usize)?;
+                    let packet_number = PacketNumber::parse(&mut data, packet_number_length)?;
                     let mut payload = data; // TODO: decrypt
-                    // TODO handle handshake packet
+                                            // TODO handle handshake packet
                     self.handle_payload(&mut payload)?;
                 }
                 0b11 => {
                     // Retry packet
                     // https://datatracker.ietf.org/doc/html/rfc9000#name-retry-packet
                     // TODO is this encoding even correct?
-                    let (retry_token, retry_integrity_tag) = data.split_last_chunk::<16>() // 128bits/8 = 16 bytes
+                    let (retry_token, retry_integrity_tag) = data
+                        .split_last_chunk::<16>() // 128bits/8 = 16 bytes
                         .ok_or_else(|| "Packet too short for Retry Token")?;
                     // TODO handle retry
                 }
@@ -101,7 +106,7 @@ impl<C: Crypto, I: Io, H: Handler> Connection<C, I, H> {
         } else {
             // Short Header
             // https://datatracker.ietf.org/doc/html/rfc9000#name-short-header-packets
-            
+
             // Fixed Bit (1) = 1 - ignored
             // Spin Bit (1)
             let spin_bit = (first_byte >> 5) & 1;
@@ -109,15 +114,15 @@ impl<C: Crypto, I: Io, H: Handler> Connection<C, I, H> {
             // Key Phase (1)
             let key_phase = (first_byte >> 2) & 1;
             // Packet Number Length (2)
-            let packet_number_length = first_byte & 0b11;
+            let packet_number_length_encoded = first_byte & 0b11;
+            let packet_number_length = 1 + packet_number_length_encoded as usize;
             let dst_cid = ConnectionId::parse(&mut data)?;
 
             // Currently 1-RTT packets are the only Short Header packets
             // https://datatracker.ietf.org/doc/html/rfc9000#name-1-rtt-packet
-            let packet_number =
-                PacketNumber::parse(&mut data, 1 + packet_number_length as usize)?;
+            let packet_number = PacketNumber::parse(&mut data, packet_number_length)?;
             let mut payload = data; // TODO: decrypt
-            // TODO handle 1-rtt
+                                    // TODO handle 1-rtt
             self.handle_payload(&mut payload)?;
         }
         Ok(())

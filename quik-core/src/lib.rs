@@ -1,3 +1,5 @@
+#![feature(slice_as_chunks)]
+
 pub mod common;
 pub mod crypto;
 pub mod frame;
