@@ -67,6 +67,8 @@ pub struct NewToken<'a> {
 }
 
 pub struct Stream<'a> {
+    pub stream_id: StreamId,
+    pub fin: bool,
     pub data: &'a [u8],
 }
 

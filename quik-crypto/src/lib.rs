@@ -11,8 +11,9 @@ impl Crypto for DefaultCrypto {
         version: u32,
         is_server: bool,
         data: &mut impl Buffer,
-    ) -> Result<impl Buffer> {
+    ) -> Result<Vec<u8>> {
         todo!();
-        Ok(&[][..])
+        // Ok(&[][..])
+        Ok(Vec::new())
     }
 }

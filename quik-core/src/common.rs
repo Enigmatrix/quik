@@ -24,6 +24,8 @@ impl From<VarInt> for usize {
 }
 
 impl VarInt {
+    pub const ZERO: VarInt = VarInt { inner: 0 };
+
     pub fn parse(src: &mut impl Buffer) -> Result<Self> {
         let mut buf = [0u8; 8];
         src.read_exact(&mut buf[..1])?;

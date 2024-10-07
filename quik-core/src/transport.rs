@@ -2,6 +2,7 @@ use std::io;
 
 use crate::common::{ConnectionId, PacketNumber, VarInt};
 use crate::crypto::Crypto;
+use crate::frame::{self, Frame};
 use crate::packet::{
     self, HandshakePacket, InitialPacket, OneRttPacket, Packet, RetryPacket,
     VersionNegotiationPacket, ZeroRTTPacket,
@@ -71,9 +72,10 @@ impl<C: Crypto, I: Io, H: Handler> Connection<C, I, H> {
                     // https://datatracker.ietf.org/doc/html/rfc9000#name-initial-packet
 
                     let token_length = VarInt::parse(&mut data)?;
-                    let (token, mut data) = data
+                    let (token, rem_data) = data
                         .split_at_checked(token_length.into())
                         .ok_or_else(|| "Token too long")?;
+                    data = rem_data;
                     let length = VarInt::parse(&mut data)?; // TODO use this
                     let packet_number = PacketNumber::parse(&mut data, packet_number_length)?;
 
@@ -90,7 +92,7 @@ impl<C: Crypto, I: Io, H: Handler> Connection<C, I, H> {
                         .crypto
                         .decrypt_initial_data(dst_cid, version, false, &mut data)
                         .await?;
-                    self.handle_payload(&mut payload)?;
+                    self.handle_payload(&mut payload).await?;
                 }
                 0b01 => {
                     // 0-RTT packet
@@ -108,7 +110,7 @@ impl<C: Crypto, I: Io, H: Handler> Connection<C, I, H> {
                             packet_number,
                         }))
                         .await?;
-                    self.handle_payload(&mut payload)?;
+                    self.handle_payload(&mut payload).await?;
                 }
                 0b10 => {
                     // Handshake packet
@@ -126,7 +128,7 @@ impl<C: Crypto, I: Io, H: Handler> Connection<C, I, H> {
                             packet_number,
                         }))
                         .await?;
-                    self.handle_payload(&mut payload)?;
+                    self.handle_payload(&mut payload).await?;
                 }
                 0b11 => {
                     // Retry packet
@@ -179,7 +181,7 @@ impl<C: Crypto, I: Io, H: Handler> Connection<C, I, H> {
                     key_phase,
                 }))
                 .await?;
-            self.handle_payload(&mut payload)?;
+            self.handle_payload(&mut payload).await?;
         }
         Ok(())
     }
@@ -188,7 +190,282 @@ impl<C: Crypto, I: Io, H: Handler> Connection<C, I, H> {
         // Close connection
     }
 
-    fn handle_payload(&self, data: &mut impl Buffer) -> Result<()> {
-        todo!()
+    async fn handle_payload(&self, mut data: &[u8]) -> Result<()> {
+        while !data.is_empty() {
+            data = self.parse_frame(data).await?;
+        }
+        Ok(())
+    }
+
+    async fn parse_frame<'a>(&'a self, mut data: &'a [u8]) -> Result<&'a [u8]> {
+        let typ: usize = VarInt::parse(&mut data)?.into();
+        match typ {
+            0x00 => {
+                // Padding
+                // https://datatracker.ietf.org/doc/html/rfc9000#name-padding-frames
+                self.handler.handle_frame(Frame::Padding).await?;
+            }
+            0x01 => {
+                // Ping
+                // https://datatracker.ietf.org/doc/html/rfc9000#name-ping-frames
+                self.handler.handle_frame(Frame::Ping).await?;
+            }
+            0x02..=0x03 => {
+                // Ack
+                // https://datatracker.ietf.org/doc/html/rfc9000#name-ack-frames
+                let largest_acked = VarInt::parse(&mut data)?;
+                let ack_delay = VarInt::parse(&mut data)?;
+                let ack_range_count = VarInt::parse(&mut data)?;
+                let first_ack_range = VarInt::parse(&mut data)?;
+
+                // TODO
+
+                self.handler
+                    .handle_frame(Frame::Ack(frame::Ack {
+                        largest_acked,
+                        ack_delay,
+                        ack_range_count,
+                        first_ack_range,
+                        ack_range: todo!(),
+                        ecn_counts: todo!(),
+                    }))
+                    .await?;
+            }
+            0x04 => {
+                // Reset Stream
+                // https://datatracker.ietf.org/doc/html/rfc9000#name-reset_stream-frames
+                let stream_id = VarInt::parse(&mut data)?;
+                let err_code = VarInt::parse(&mut data)?;
+                let final_size = VarInt::parse(&mut data)?;
+
+                self.handler
+                    .handle_frame(Frame::ResetStream(frame::ResetStream {
+                        stream_id,
+                        err_code,
+                        final_size,
+                    }))
+                    .await?;
+            }
+            0x05 => {
+                // Stop Sending
+                // https://datatracker.ietf.org/doc/html/rfc9000#name-stop_sending-frames
+                let stream_id = VarInt::parse(&mut data)?;
+                let err_code = VarInt::parse(&mut data)?;
+
+                self.handler
+                    .handle_frame(Frame::StopSending(frame::StopSending {
+                        stream_id,
+                        err_code,
+                    }))
+                    .await?;
+            }
+            0x06 => {
+                // Crypto
+                // https://datatracker.ietf.org/doc/html/rfc9000#name-crypto-frames
+                let offset = VarInt::parse(&mut data)?;
+                let length = VarInt::parse(&mut data)?;
+                let (_, rem_data) = data
+                    .split_at_checked(offset.into())
+                    .ok_or_else(|| "Not enough bytes for Crypto Offset")?;
+                let (crypto_data, rem_data) = rem_data
+                    .split_at_checked(length.into())
+                    .ok_or_else(|| "Not enough bytes for Crypto Length")?;
+                data = rem_data;
+
+                self.handler
+                    .handle_frame(Frame::Crypto(frame::Crypto { data: crypto_data }))
+                    .await?;
+            }
+            0x07 => {
+                // New Token
+                // https://datatracker.ietf.org/doc/html/rfc9000#name-new_token-frames
+                let token_length = VarInt::parse(&mut data)?;
+                let (token, rem_data) = data
+                    .split_at_checked(token_length.into())
+                    .ok_or_else(|| "Not enough bytes for Token")?;
+                data = rem_data;
+
+                self.handler
+                    .handle_frame(Frame::NewToken(frame::NewToken { token }))
+                    .await?;
+            }
+            0x08..=0x0f => {
+                // Stream
+                // https://datatracker.ietf.org/doc/html/rfc9000#name-stream-frames
+                let off_bit = typ & 0b100;
+                let len_bit = typ & 0b010;
+                let fin_bit = typ & 0b001;
+
+                let stream_id = VarInt::parse(&mut data)?;
+                let offset = if off_bit != 0 {
+                    Some(VarInt::parse(&mut data)?)
+                } else {
+                    None
+                };
+                let length = if len_bit != 0 {
+                    Some(VarInt::parse(&mut data)?)
+                } else {
+                    None
+                };
+
+                let (_, rem_data) = data
+                    .split_at_checked(offset.unwrap_or(VarInt::ZERO).into())
+                    .ok_or_else(|| "Not enough bytes for Stream Offset")?;
+                let (stream_data, rem_data) = rem_data
+                    .split_at_checked(length.unwrap_or(VarInt::ZERO).into())
+                    .ok_or_else(|| "Not enough bytes for Stream Length")?;
+                data = rem_data;
+
+                self.handler
+                    .handle_frame(Frame::Stream(frame::Stream {
+                        stream_id,
+                        data: stream_data,
+                        fin: fin_bit != 0,
+                    }))
+                    .await?;
+            }
+            0x10 => {
+                // Max Data
+                // https://datatracker.ietf.org/doc/html/rfc9000#name-max_data-frames
+                let max_data = VarInt::parse(&mut data)?;
+
+                self.handler
+                    .handle_frame(Frame::MaxData(frame::MaxData { max_data }))
+                    .await?;
+            }
+            0x11 => {
+                // Max Stream Data
+                // https://datatracker.ietf.org/doc/html/rfc9000#name-max_stream_data-frames
+                let stream_id = VarInt::parse(&mut data)?;
+                let max_stream_data = VarInt::parse(&mut data)?;
+
+                self.handler
+                    .handle_frame(Frame::MaxStreamData(frame::MaxStreamData {
+                        stream_id,
+                        max_stream_data,
+                    }))
+                    .await?;
+            }
+            0x12..=0x13 => {
+                // Max Streams
+                // https://datatracker.ietf.org/doc/html/rfc9000#name-max_streams-frames
+                let max_streams = VarInt::parse(&mut data)?;
+                // TODO 0x12 is bidirectional, 0x13 is unidirectional. Does this matter?
+
+                self.handler
+                    .handle_frame(Frame::MaxStreams(frame::MaxStreams { max_streams }))
+                    .await?;
+            }
+            0x14 => {
+                // Data Blocked
+                // https://datatracker.ietf.org/doc/html/rfc9000#name-data_blocked-frames
+                let max_data = VarInt::parse(&mut data)?;
+
+                self.handler
+                    .handle_frame(Frame::DataBlocked(frame::DataBlocked { max_data }))
+                    .await?;
+            }
+            0x15 => {
+                // Stream Data Blocked
+                // https://datatracker.ietf.org/doc/html/rfc9000#name-stream_data_blocked-frames
+                let stream_id = VarInt::parse(&mut data)?;
+                let max_stream_data = VarInt::parse(&mut data)?;
+
+                self.handler
+                    .handle_frame(Frame::StreamDataBlocked(frame::StreamDataBlocked {
+                        stream_id,
+                        max_stream_data,
+                    }))
+                    .await?;
+            }
+            0x16..=0x17 => {
+                // Streams Blocked
+                // https://datatracker.ietf.org/doc/html/rfc9000#name-streams_blocked-frames
+                let max_streams = VarInt::parse(&mut data)?;
+                // TODO 0x16 is bidirectional, 0x17 is unidirectional. Does this matter?
+
+                self.handler
+                    .handle_frame(Frame::StreamsBlocked(frame::StreamsBlocked { max_streams }))
+                    .await?;
+            }
+            0x18 => {
+                // New Connection ID
+                // https://datatracker.ietf.org/doc/html/rfc9000#name-new_connection_id-frames
+                let seq_num = VarInt::parse(&mut data)?;
+                let retire_prior_to = VarInt::parse(&mut data)?;
+                let cid = ConnectionId::parse(&mut data)?;
+                let stateless_reset_token = data.read_u128::<NetworkEndian>()?;
+
+                self.handler
+                    .handle_frame(Frame::NewConnectionId(frame::NewConnectionId {
+                        seq_num,
+                        retire_prior_to,
+                        cid,
+                        stateless_reset_token,
+                    }))
+                    .await?;
+            }
+            0x19 => {
+                // Retire Connection ID
+                // https://datatracker.ietf.org/doc/html/rfc9000#name-retire_connection_id-frames
+                let seq_num = VarInt::parse(&mut data)?;
+
+                self.handler
+                    .handle_frame(Frame::RetireConnectionId(frame::RetireConnectionId {
+                        seq_num,
+                    }))
+                    .await?;
+            }
+            0x1a => {
+                // Path Challenge
+                // https://datatracker.ietf.org/doc/html/rfc9000#name-path_challenge-frames
+                let data = data.read_u64::<NetworkEndian>()?;
+
+                self.handler
+                    .handle_frame(Frame::PathChallenge(frame::PathChallenge { data }))
+                    .await?;
+            }
+            0x1b => {
+                // Path Response
+                // https://datatracker.ietf.org/doc/html/rfc9000#name-path_response-frames
+                let data = data.read_u64::<NetworkEndian>()?;
+
+                self.handler
+                    .handle_frame(Frame::PathResponse(frame::PathResponse { data }))
+                    .await?;
+            }
+            0x1c..=0x1d => {
+                // Connection Close
+                // https://datatracker.ietf.org/doc/html/rfc9000#name-connection_close-frames
+                let err_code = VarInt::parse(&mut data)?;
+                let frame_type = if typ == 0x1c {
+                    Some(VarInt::parse(&mut data)?)
+                } else {
+                    None
+                };
+                let reason_phrase_length = VarInt::parse(&mut data)?;
+                let (reason_phrase, rem_data) = data
+                    .split_at_checked(reason_phrase_length.into())
+                    .ok_or_else(|| "Not enough bytes for Reason Phrase")?;
+                data = rem_data;
+
+                self.handler
+                    .handle_frame(Frame::ConnectionClose(frame::ConnectionClose {
+                        err_code,
+                        frame_type,
+                        reason_phrase,
+                    }))
+                    .await?;
+            }
+            0x1e => {
+                // Handshake Done
+                // https://datatracker.ietf.org/doc/html/rfc9000#name-handshake_done-frames
+                self.handler.handle_frame(Frame::HandshakeDone).await?;
+            }
+            _ => {
+                Err("Unknown frame type")?;
+            }
+        }
+        Ok(data)
     }
 }
