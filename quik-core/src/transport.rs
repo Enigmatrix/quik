@@ -26,10 +26,12 @@ impl<C: Crypto, I: Io, H: Handler> Connection<C, I, H> {
         // Header Form (1) bit
         if first_byte >> 7 != 0 {
             // Long Header
+            // https://datatracker.ietf.org/doc/html/rfc9000#long-header
+
             // Fixed Bit (1) = 1 - ignored
             // Long Packet Type (2) - not used in VersionNegotiation
             let packet_type = (first_byte >> 4) & 0b11;
-            // Reserverd (2) - ignored
+            // Reserved (2) - ignored
             // Packet Number Length (2) - not used in Retry & VersionNegotiation
             let packet_number_length = first_byte & 0b11;
 
@@ -48,6 +50,7 @@ impl<C: Crypto, I: Io, H: Handler> Connection<C, I, H> {
                     let (token, mut data) = data
                         .split_at_checked(token_length.into())
                         .ok_or_else(|| "Token too long")?;
+                    let length = VarInt::parse(&mut data)?; // TODO use this
                     let packet_number =
                         PacketNumber::parse(&mut data, 1 + packet_number_length as usize)?;
                     self.handler
@@ -63,22 +66,59 @@ impl<C: Crypto, I: Io, H: Handler> Connection<C, I, H> {
                         .crypto
                         .decrypt_initial_data(dst_cid, version, false, &mut data)
                         .await?;
-                    // TODO there are multiple frames...
-                    self.handle_raw_frame(&mut payload)?;
+                    self.handle_payload(&mut payload)?;
                 }
                 0b01 => {
                     // 0-RTT packet
+                    // https://datatracker.ietf.org/doc/html/rfc9000#name-0-rtt
+                    let length = VarInt::parse(&mut data)?; // TODO use this
+                    let packet_number =
+                        PacketNumber::parse(&mut data, 1 + packet_number_length as usize)?;
+                    let mut payload = data; // TODO: decrypt
+                    // TODO handle 0-rtt
+                    self.handle_payload(&mut payload)?;
                 }
                 0b10 => {
                     // Handshake packet
+                    // https://datatracker.ietf.org/doc/html/rfc9000#packet-handshake
+                    let length = VarInt::parse(&mut data)?; // TODO use this
+                    let packet_number =
+                        PacketNumber::parse(&mut data, 1 + packet_number_length as usize)?;
+                    let mut payload = data; // TODO: decrypt
+                    // TODO handle handshake packet
+                    self.handle_payload(&mut payload)?;
                 }
                 0b11 => {
                     // Retry packet
+                    // https://datatracker.ietf.org/doc/html/rfc9000#name-retry-packet
+                    // TODO is this encoding even correct?
+                    let (retry_token, retry_integrity_tag) = data.split_last_chunk::<16>() // 128bits/8 = 16 bytes
+                        .ok_or_else(|| "Packet too short for Retry Token")?;
+                    // TODO handle retry
                 }
                 _ => unreachable!(),
             }
         } else {
             // Short Header
+            // https://datatracker.ietf.org/doc/html/rfc9000#name-short-header-packets
+            
+            // Fixed Bit (1) = 1 - ignored
+            // Spin Bit (1)
+            let spin_bit = (first_byte >> 5) & 1;
+            // Reserved (2) - ignored
+            // Key Phase (1)
+            let key_phase = (first_byte >> 2) & 1;
+            // Packet Number Length (2)
+            let packet_number_length = first_byte & 0b11;
+            let dst_cid = ConnectionId::parse(&mut data)?;
+
+            // Currently 1-RTT packets are the only Short Header packets
+            // https://datatracker.ietf.org/doc/html/rfc9000#name-1-rtt-packet
+            let packet_number =
+                PacketNumber::parse(&mut data, 1 + packet_number_length as usize)?;
+            let mut payload = data; // TODO: decrypt
+            // TODO handle 1-rtt
+            self.handle_payload(&mut payload)?;
         }
         Ok(())
     }
@@ -87,7 +127,7 @@ impl<C: Crypto, I: Io, H: Handler> Connection<C, I, H> {
         // Close connection
     }
 
-    fn handle_raw_frame(&self, data: &mut impl Buffer) -> Result<()> {
+    fn handle_payload(&self, data: &mut impl Buffer) -> Result<()> {
         todo!()
     }
 }
