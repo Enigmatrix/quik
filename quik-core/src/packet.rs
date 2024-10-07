@@ -2,21 +2,21 @@ use crate::common::ConnectionId;
 // Packets handled by the middle layer
 
 pub enum Packet<'a> {
-    VersionNegotiation(VersionNegotiationPacket<'a>),
-    Initial(InitialPacket<'a>),
-    ZeroRTT(ZeroRTTPacket),
-    Handshake(HandshakePacket),
-    Retry(RetryPacket<'a>),
-    OneRtt(OneRttPacket),
+    VersionNegotiation(VersionNegotiation<'a>),
+    Initial(Initial<'a>),
+    ZeroRTT(ZeroRTT),
+    Handshake(Handshake),
+    Retry(Retry<'a>),
+    OneRtt(OneRtt),
 }
 
-pub struct VersionNegotiationPacket<'a> {
+pub struct VersionNegotiation<'a> {
     pub src_cid: ConnectionId,
     pub dst_cid: ConnectionId,
     pub supported_versions: &'a [u32],
 }
 
-pub struct InitialPacket<'a> {
+pub struct Initial<'a> {
     pub src_cid: ConnectionId,
     pub dst_cid: ConnectionId,
     pub version: u32,
@@ -26,7 +26,7 @@ pub struct InitialPacket<'a> {
     pub packet_number: u32,
 }
 
-pub struct ZeroRTTPacket {
+pub struct ZeroRTT {
     pub src_cid: ConnectionId,
     pub dst_cid: ConnectionId,
     pub version: u32,
@@ -35,7 +35,7 @@ pub struct ZeroRTTPacket {
     pub packet_number: u32,
 }
 
-pub struct HandshakePacket {
+pub struct Handshake {
     pub src_cid: ConnectionId,
     pub dst_cid: ConnectionId,
     pub version: u32,
@@ -44,7 +44,7 @@ pub struct HandshakePacket {
     pub packet_number: u32,
 }
 
-pub struct RetryPacket<'a> {
+pub struct Retry<'a> {
     pub src_cid: ConnectionId,
     pub dst_cid: ConnectionId,
     pub version: u32,
@@ -54,7 +54,7 @@ pub struct RetryPacket<'a> {
 }
 
 // This one actually uses the short header
-pub struct OneRttPacket {
+pub struct OneRtt {
     pub dst_cid: ConnectionId,
     pub spin: u8,
     pub key_phase: u8,

@@ -3,10 +3,7 @@ use std::io;
 use crate::common::{ConnectionId, PacketNumber, VarInt};
 use crate::crypto::Crypto;
 use crate::frame::{self, Frame};
-use crate::packet::{
-    self, HandshakePacket, InitialPacket, OneRttPacket, Packet, RetryPacket,
-    VersionNegotiationPacket, ZeroRTTPacket,
-};
+use crate::packet::{self, Packet};
 use crate::server::Handler;
 use quik_util::*;
 
@@ -58,7 +55,7 @@ impl<C: Crypto, I: Io, H: Handler> Connection<C, I, H> {
                 // TODO check remainder?
 
                 self.handler
-                    .handle_packet(Packet::VersionNegotiation(VersionNegotiationPacket {
+                    .handle_packet(Packet::VersionNegotiation(packet::VersionNegotiation {
                         src_cid,
                         dst_cid: dst_cid.clone(),
                         supported_versions: &versions,
@@ -80,7 +77,7 @@ impl<C: Crypto, I: Io, H: Handler> Connection<C, I, H> {
                     let packet_number = PacketNumber::parse(&mut data, packet_number_length)?;
 
                     self.handler
-                        .handle_packet(Packet::Initial(InitialPacket {
+                        .handle_packet(Packet::Initial(packet::Initial {
                             src_cid,
                             dst_cid: dst_cid.clone(),
                             version,
@@ -103,7 +100,7 @@ impl<C: Crypto, I: Io, H: Handler> Connection<C, I, H> {
                     let mut payload = data; // TODO: decrypt
 
                     self.handler
-                        .handle_packet(Packet::ZeroRTT(ZeroRTTPacket {
+                        .handle_packet(Packet::ZeroRTT(packet::ZeroRTT {
                             src_cid,
                             dst_cid: dst_cid.clone(),
                             version,
@@ -121,7 +118,7 @@ impl<C: Crypto, I: Io, H: Handler> Connection<C, I, H> {
                     let mut payload = data; // TODO: decrypt
 
                     self.handler
-                        .handle_packet(Packet::Handshake(HandshakePacket {
+                        .handle_packet(Packet::Handshake(packet::Handshake {
                             src_cid,
                             dst_cid: dst_cid.clone(),
                             version,
@@ -142,7 +139,7 @@ impl<C: Crypto, I: Io, H: Handler> Connection<C, I, H> {
                         (&retry_integrity_tag[..]).read_u128::<NetworkEndian>()?;
 
                     self.handler
-                        .handle_packet(Packet::Retry(RetryPacket {
+                        .handle_packet(Packet::Retry(packet::Retry {
                             src_cid,
                             dst_cid: dst_cid.clone(),
                             version,
@@ -174,7 +171,7 @@ impl<C: Crypto, I: Io, H: Handler> Connection<C, I, H> {
             let mut payload = data; // TODO: decrypt
 
             self.handler
-                .handle_packet(Packet::OneRtt(OneRttPacket {
+                .handle_packet(Packet::OneRtt(packet::OneRtt {
                     dst_cid: dst_cid.clone(),
                     packet_number,
                     spin,
