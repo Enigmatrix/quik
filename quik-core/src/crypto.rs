@@ -1,5 +1,6 @@
-use crate::common::ConnectionId;
 use quik_util::*;
+
+use crate::common::ConnectionId;
 
 pub trait Crypto {
     fn decrypt_initial_data(

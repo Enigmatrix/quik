@@ -1,7 +1,9 @@
+use std::io;
+
+use quik_util::*;
+
 use crate::common::{ConnectionId, PacketNumber, VarInt};
 use crate::crypto::Crypto;
-use quik_util::*;
-use std::io;
 // Packets handled by the middle layer
 
 pub enum Packet<'a> {

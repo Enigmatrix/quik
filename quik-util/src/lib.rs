@@ -1,7 +1,6 @@
-pub use byteorder::ReadBytesExt;
-pub use byteorder::{ByteOrder, NetworkEndian};
-
 pub use std::future::*;
+
+pub use byteorder::{ByteOrder, NetworkEndian, ReadBytesExt};
 pub type Result<T> = std::result::Result<T, Box<dyn std::error::Error>>;
 
 pub trait Buffer: ReadBytesExt {

@@ -1,10 +1,11 @@
 use std::iter::Empty;
 
+use quik_util::*;
+
 use crate::crypto::Crypto;
 use crate::frame::Frame;
 use crate::packet::{Packet, RemainingBuf};
 use crate::server::Handler;
-use quik_util::*;
 
 pub trait Io {
     fn send(&self, data: &[u8]) -> impl Future<Output = Result<()>>;
