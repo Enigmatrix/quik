@@ -1,6 +1,6 @@
 [package]
 name = "quik-core"
-version = "0.0.6"
+version = "0.0.7"
 edition = "2021"
 license = "MIT"
 repository = "https://github.com/Enigmatrix/quik"
@@ -9,4 +9,4 @@ Core protocol implementation for the `quik` QUIC library
 """
 
 [dependencies]
-quik-util = { path = "../quik-util", version = "0.0.6" }
+quik-util = { path = "../quik-util", version = "0.0.7" }
