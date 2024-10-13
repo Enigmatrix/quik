@@ -20,8 +20,8 @@ pub struct Connection<C: Crypto, I: Io, H: Handler> {
 }
 
 impl<C: Crypto, I: Io, H: Handler> Connection<C, I, H> {
-    pub fn send(&self, data: &[u8]) {
-        // Send data
+    pub fn send<'a>(&self, packet: Packet, frames: impl Iterator<Item = Frame<'a>>) {
+        // Send data using the underlying UDP transport
     }
 
     pub async fn recv(&self, data: &[u8]) -> Result<()> {

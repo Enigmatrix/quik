@@ -15,6 +15,19 @@ pub enum Packet<'a> {
     OneRtt(OneRtt),
 }
 
+impl Packet<'_> {
+    pub fn dst_cid(&self) -> &ConnectionId {
+        match self {
+            Packet::VersionNegotiation(vn) => &vn.dst_cid,
+            Packet::Initial(i) => &i.dst_cid,
+            Packet::ZeroRTT(z) => &z.dst_cid,
+            Packet::Handshake(h) => &h.dst_cid,
+            Packet::Retry(r) => &r.dst_cid,
+            Packet::OneRtt(o) => &o.dst_cid,
+        }
+    }
+}
+
 pub struct VersionNegotiation {
     pub src_cid: ConnectionId,
     pub dst_cid: ConnectionId,

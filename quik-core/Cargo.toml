@@ -10,3 +10,6 @@ Core protocol implementation for the `quik` QUIC library
 
 [dependencies]
 quik-util = { path = "../quik-util", version = "0.0.8" }
+
+[dev-dependencies]
+tokio = { version = "1", features = ["full"] }
