@@ -3,6 +3,8 @@ pub use std::future::*;
 pub use byteorder::{ByteOrder, NetworkEndian, ReadBytesExt};
 pub type Result<T> = std::result::Result<T, Box<dyn std::error::Error>>;
 
+pub use tokio::sync::Mutex;
+
 pub trait Buffer: ReadBytesExt {
     fn slice(&mut self, len: usize) -> Result<Self>
     where
