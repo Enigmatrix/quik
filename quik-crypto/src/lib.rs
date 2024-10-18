@@ -1,5 +1,5 @@
-use quik_core::common::ConnectionId;
 use quik_core::crypto::Crypto;
+use quik_core::wire::ConnectionId;
 use quik_util::*;
 
 pub struct DefaultCrypto;

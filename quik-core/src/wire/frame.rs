@@ -1,6 +1,6 @@
 use quik_util::*;
 
-use crate::common::{ConnectionId, StreamId, VarInt};
+use crate::wire::{ConnectionId, StreamId, VarInt};
 
 pub enum Frame<'a> {
     Padding,
