@@ -2,6 +2,7 @@
 
 pub mod connection;
 pub mod crypto;
+pub mod handler;
 pub mod provider;
 pub mod server;
 pub mod stream;

@@ -3,7 +3,7 @@ use std::iter::Empty;
 use quik_util::*;
 
 use crate::crypto::Crypto;
-use crate::server::Handler;
+use crate::handler::Handler;
 use crate::wire::packet::RemainingBuf;
 use crate::wire::{Frame, Packet};
 
