@@ -143,6 +143,12 @@ mod tests {
     trait Connection {
         fn dropped(&self) -> impl Future<Output = Result<()>>;
     }
+    struct DefaultConnection;
+    impl Connection for DefaultConnection {
+        async fn dropped(&self) -> Result<()> {
+            todo!()
+        }
+    }
     
     trait Provider {
         type Connection: Connection;
@@ -152,7 +158,29 @@ mod tests {
         fn create_stream(&self, conn: &mut Self::Connection, id: StreamId) -> impl Future<Output = Result<Self::Stream>>;
     }
     
+    struct DefaultProvider;
+    impl Provider for DefaultProvider {
+        type Connection = DefaultConnection;
+        type Stream = ReadStream;
+    
+        async fn create_connection(&self, id: ConnectionId) -> Result<Self::Connection> {
+            todo!()
+        }
+        async fn create_stream(&self, conn: &mut Self::Connection, id: StreamId) -> Result<Self::Stream> {
+            Ok(ReadStream::new(None))
+        }
+    }
+    
     struct ReadStream(Mutex<ReadStreamInner>);
+    impl ReadStream {
+        fn new(max_len: Option<usize>) -> Self {
+            Self(Mutex::new(ReadStreamInner {
+                max_len,
+                data: Vec::new(),
+                eof: false
+            }))
+        }
+    }
     struct ReadStreamInner {
         max_len: Option<usize>,
         data: Vec<u8>,
