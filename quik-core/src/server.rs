@@ -9,47 +9,6 @@ use crate::frame::Frame;
 use crate::packet::Packet;
 use crate::transport::Io;
 
-pub struct Stream {
-    
-}
-
-pub struct Connection {
-    pub steams: HashMap<StreamId, Stream>
-}
-
-pub struct DefaultHandler {
-    pub connections: RwLock<HashMap<ConnectionId, Connection>>
-}
-
-impl DefaultHandler {
-    pub fn new() -> Self {
-        Self {
-            connections: RwLock::new(HashMap::new())
-        }
-    }
-}
-
-impl Handler for DefaultHandler  {
-    async fn handle<'a>(
-        &self,
-        packet: Packet<'a>,
-        frames: impl Iterator<Item = Result<Frame<'a>>>,
-    ) -> Result<()> {
-        // TODO: why do i need a unwrap here?
-        let conns = self.connections.read().unwrap();
-        if let Some(conn) = conns.get(packet.dst_cid()) {
-
-        } else {
-            drop(conns);
-            self.connections.write().unwrap().insert(packet.dst_cid().clone(), Connection {
-                steams: HashMap::new()
-            });
-        }
-
-        todo!()
-    }
-}
-
 // if this needs to be mutable inside, then it should use a mutex internally
 pub trait Handler {
     fn handle<'a>(
@@ -247,9 +206,8 @@ mod tests {
         // });
         
         
-        let handler = ConnectProvider::new(|conn_id| async {
-            Ok(Connection::new())
-        });
+        let provider = DefaultProvider;
+        let handler = DefaultHandler::new(provider);
         
         DefaultServer::new(handler).run().await?;
         Ok(())
