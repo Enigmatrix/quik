@@ -1,5 +1,6 @@
 use std::future::Future;
 use std::io::Read;
+use std::sync::Arc;
 
 use quik_util::*;
 
@@ -8,18 +9,19 @@ pub trait StreamRx {
   fn on_close(&self) -> impl Future<Output = Result<()>>;
 }
 
-struct DefaultStreamRx {
-  inner: Mutex<ReadStreamInner>,
+#[derive(Clone)]
+pub struct DefaultStreamRx {
+  inner: Arc<Mutex<ReadStreamInner>>,
 }
 
 impl DefaultStreamRx {
-  fn new(max_len: Option<usize>) -> Self {
+  pub fn new(max_len: Option<usize>) -> Self {
     Self {
-      inner: Mutex::new(ReadStreamInner {
+      inner: Arc::new(Mutex::new(ReadStreamInner {
         max_len,
         data: Vec::new(),
         eof: false,
-      }),
+      })),
     }
   }
 }
