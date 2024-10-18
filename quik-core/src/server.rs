@@ -68,6 +68,9 @@ pub trait Server {
 
 #[cfg(test)]
 mod tests {
+    use std::io::Read;
+    use tokio::sync::Mutex;
+
     use super::*;
     
     struct DefaultCrypto;
@@ -147,6 +150,46 @@ mod tests {
     
         fn create_connection(&self, id: ConnectionId) -> impl Future<Output = Result<Self::Connection>>;
         fn create_stream(&self, conn: &mut Self::Connection, id: StreamId) -> impl Future<Output = Result<Self::Stream>>;
+    }
+    
+    struct ReadStream(Mutex<ReadStreamInner>);
+    struct ReadStreamInner {
+        max_len: Option<usize>,
+        data: Vec<u8>,
+        eof: bool
+    }
+    impl Stream for ReadStream {
+        async fn recv(&self, data: &[u8]) -> Result<()> {
+            let mut inner = self.0.lock().await;
+            if let Some(max_len) = inner.max_len {
+                if inner.data.len() + data.len() > max_len {
+                    return Err("Data exceeds max length".into());
+                }
+            }
+            inner.data.extend_from_slice(data);
+            Ok(())
+        }
+        async fn dropped(&self) -> Result<()> {
+            self.0.lock().await.eof = true;
+            Ok(())
+        }
+    }
+    impl ReadStream {
+        async fn read_async(&self, buf: &mut [u8]) -> std::io::Result<usize> {
+            let mut inner = self.0.lock().await;
+            if inner.eof {
+                return Ok(0);
+            }
+            
+            let mut data = inner.data.as_slice();
+            let len = data.read(buf)?;
+            if len == inner.data.len() {
+                inner.data.clear();
+            } else if len != 0 {
+                inner.data = data.to_vec();
+            }
+            Ok(len)
+        }
     }
     
     #[tokio::test]
