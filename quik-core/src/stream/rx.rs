@@ -4,6 +4,8 @@ use std::sync::Arc;
 
 use quik_util::*;
 
+use crate::wire::StreamId;
+
 pub trait StreamRx {
   fn on_data(&self, data: &[u8]) -> impl Future<Output = Result<()>>;
   fn on_close(&self) -> impl Future<Output = Result<()>>;
@@ -11,12 +13,14 @@ pub trait StreamRx {
 
 #[derive(Clone)]
 pub struct DefaultStreamRx {
+  pub sid: StreamId,
   inner: Arc<Mutex<ReadStreamInner>>,
 }
 
 impl DefaultStreamRx {
-  pub fn new(max_len: Option<usize>) -> Self {
+  pub fn new(sid: StreamId, max_len: Option<usize>) -> Self {
     Self {
+      sid,
       inner: Arc::new(Mutex::new(ReadStreamInner {
         max_len,
         data: Vec::new(),

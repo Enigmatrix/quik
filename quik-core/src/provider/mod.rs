@@ -14,11 +14,31 @@ pub trait Provider {
   fn create_stream(
     &self,
     conn: &mut Self::Connection,
-    id: StreamId,
+    sid: StreamId,
   ) -> impl Future<Output = Result<Self::StreamRx>>;
 }
 
-pub struct DefaultProvider;
+pub struct DefaultProvider {
+  cb: Box<
+    dyn Fn(
+      &mut <DefaultProvider as Provider>::Connection,
+      &<DefaultProvider as Provider>::StreamRx,
+    ) -> Result<()>,
+  >,
+}
+
+impl DefaultProvider {
+  pub fn new(
+    cb: Box<
+      dyn Fn(
+        &mut <DefaultProvider as Provider>::Connection,
+        &<DefaultProvider as Provider>::StreamRx,
+      ) -> Result<()>,
+    >,
+  ) -> Self {
+    Self { cb: Box::new(cb) }
+  }
+}
 
 impl Provider for DefaultProvider {
   type Connection = DefaultConnection;
@@ -31,9 +51,10 @@ impl Provider for DefaultProvider {
   async fn create_stream(
     &self,
     conn: &mut Self::Connection,
-    id: StreamId,
+    sid: StreamId,
   ) -> Result<Self::StreamRx> {
-    let rx = DefaultStreamRx::new(None);
+    let rx = DefaultStreamRx::new(sid, None);
+    (self.cb)(conn, &rx)?;
     Ok(rx)
   }
 }
