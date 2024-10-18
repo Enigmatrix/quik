@@ -138,16 +138,15 @@ mod tests {
     }
     
     trait Connection {
-        type Stream: Stream;
-
-        fn on_stream(&self, id: StreamId) -> impl Future<Output = Result<Self::Stream>>;
         fn dropped(&self) -> impl Future<Output = Result<()>>;
     }
     
     trait Provider {
         type Connection: Connection;
+        type Stream: Stream;
     
-        fn on_connect(&self, id: ConnectionId) -> impl Future<Output = Result<Self::Connection>>;
+        fn create_connection(&self, id: ConnectionId) -> impl Future<Output = Result<Self::Connection>>;
+        fn create_stream(&self, conn: &mut Self::Connection, id: StreamId) -> impl Future<Output = Result<Self::Stream>>;
     }
     
     #[tokio::test]
