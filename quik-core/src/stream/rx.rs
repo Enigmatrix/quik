@@ -3,7 +3,7 @@ use std::io::Read;
 
 use quik_util::*;
 
-trait StreamRx {
+pub trait StreamRx {
   fn on_data(&self, data: &[u8]) -> impl Future<Output = Result<()>>;
   fn on_close(&self) -> impl Future<Output = Result<()>>;
 }

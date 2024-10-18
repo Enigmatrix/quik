@@ -2,6 +2,6 @@ use std::future::Future;
 
 use quik_util::*;
 
-trait Connection {
+pub trait Connection {
   fn dropped(&self) -> impl Future<Output = Result<()>>;
 }
